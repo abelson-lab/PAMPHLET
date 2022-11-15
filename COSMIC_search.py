@@ -131,12 +131,12 @@ def rank_cosmic_rows(cosmic_mutation_file_name, cosmic_CNV_file_name,
     # turn dict into list, and sort them based on frequency
     known_l_chip_list_headings = [[
         'gene',
-        'T Cell Frequency Point', 'tumour num', 'total tumour num',
-        'B Cell Frequency Point', 'tumour num', 'total tumour num',
-        'Other Cell Frequency Point', 'tumour num', 'total tumour num',
-        'T Cell Frequency CNV', 'tumour num', 'total tumour num',
-        'B Cell Frequency CNV', 'tumour num', 'total tumour num',
-        'Other Cell Frequency CNV', 'tumour num', 'total tumour num',
+        'T Cell Frequency Point', 'tumour num', 'total tumour num', 'position',
+        'B Cell Frequency Point', 'tumour num', 'total tumour num', 'position',
+        'Other Cell Frequency Point', 'tumour num', 'total tumour num', 'position',
+        'T Cell Frequency CNV', 'tumour num', 'total tumour num', 'position',
+        'B Cell Frequency CNV', 'tumour num', 'total tumour num', 'position',
+        'Other Cell Frequency CNV', 'tumour num', 'total tumour num', 'position',
         'CNV or not', 'found in healthy'
     ]]
 
@@ -150,6 +150,7 @@ def rank_cosmic_rows(cosmic_mutation_file_name, cosmic_CNV_file_name,
                       potential_l_chip_list)
 
     genes_in_healthy = which_genes_were_mutated_in_healthy(l_chip_gene_set_1, healthy_mutation_file_name)
+    unhealthy_genes = []
     for i in range(len(known_l_chip_list)):
         gene_info = known_l_chip_list[i]
         gene = gene_info[0]
@@ -157,26 +158,30 @@ def rank_cosmic_rows(cosmic_mutation_file_name, cosmic_CNV_file_name,
             known_l_chip_list[i].append('healthy')
         else:
             known_l_chip_list[i].append('___')
+            unhealthy_genes.append(gene)
 
+    print(unhealthy_genes)
 
 
 
     sorted_known_l_chip_list_T = sorted(known_l_chip_list,
                                         key=lambda x: float(x[1]), reverse=True)
     sorted_known_l_chip_list_B = sorted(known_l_chip_list,
-                                        key=lambda x: float(x[4]), reverse=True)
+                                        key=lambda x: float(x[5]), reverse=True)
     sorted_known_l_chip_list_O = sorted(known_l_chip_list,
-                                        key=lambda x: float(x[7]), reverse=True)
+                                        key=lambda x: float(x[9]), reverse=True)
     sorted_known_l_chip_list_TC = sorted(known_l_chip_list,
-                                        key=lambda x: float(x[10]), reverse=True)
-    sorted_known_l_chip_list_BC = sorted(known_l_chip_list,
                                         key=lambda x: float(x[13]), reverse=True)
+    sorted_known_l_chip_list_BC = sorted(known_l_chip_list,
+                                        key=lambda x: float(x[17]), reverse=True)
     sorted_known_l_chip_list_OC = sorted(known_l_chip_list,
-                                        key=lambda x: float(x[16]), reverse=True)
+                                        key=lambda x: float(x[21]), reverse=True)
 
     sorted_potential_l_chip_list = sorted(potential_l_chip_list,
                                           key=lambda x: float(x[1]),
                                           reverse=True)
+
+    print(list(sorted_potential_l_chip_list))
 
 
     # write into files
@@ -379,9 +384,12 @@ def convert_dict_list(gene_cell_type_dict,
                 l_chip_sublist.append(info['frequency percentage'])
                 l_chip_sublist.append(info['num_tumour_gene_cell_type'])
                 l_chip_sublist.append(info['num_tumour_total_cell_type'])
+                l_chip_sublist.append(info['mutation genome position'])
+                print(info['study id'])
             else:
                 l_chip_sublist.append(0)
                 l_chip_sublist.append(0)
+                l_chip_sublist.append('n/a')
                 l_chip_sublist.append('n/a')
 
         if 'T_cell CNV' not in cell_type_info_dict \
@@ -390,6 +398,8 @@ def convert_dict_list(gene_cell_type_dict,
             l_chip_sublist.append('___')
         else:
             l_chip_sublist.append('CNV')
+
+        print()
 
             # TODO other stuff we want in the table
 
@@ -416,7 +426,7 @@ def which_genes_were_mutated_in_healthy(l_chip_gene_set_1_all, healthy_mutation_
         gene_list.extend(stripped_lines)
     l_chip_gene_set_1_healthy_mutation = set(gene_list)
 
-    print(l_chip_gene_set_1_healthy_mutation)
+    print('genes found mutated in healthy individuals', l_chip_gene_set_1_healthy_mutation)
 
     print(len(l_chip_gene_set_1_healthy_mutation))
 
