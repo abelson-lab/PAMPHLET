@@ -55,17 +55,17 @@ def rank_cosmic_rows(cosmic_mutation_file_name, cosmic_CNV_file_name,
         gene_cell_mutation_type_info_dict)
 
     # filter out those not found in at least 2 studies
-    reproducible = {}
-    filter_non_reproducible(gene_cell_mutation_type_info_dict, reproducible)
-    print('reproducible', len(reproducible))
+    # TODO change this to in more than 1 tumour
+    # reproducible = {}
+    # filter_non_reproducible(gene_cell_mutation_type_info_dict, reproducible)
+    # print('reproducible', len(reproducible))
+    reproducible = gene_cell_mutation_type_info_dict
 
     # read CNV
     gene_cell_mutation_type_info_dict_CNV = {}
-    CNV_gene_list = []
     cell_type_num_tumor_dict_CNV = {}
     read_CNV_file(cosmic_CNV_file_name,
                   cell_type_num_tumor_dict_CNV,
-                  CNV_gene_list,
                   gene_cell_mutation_type_info_dict_CNV,
                   important_column_heading_list_CNV,
                   important_column_number_list_CNV)
@@ -76,7 +76,23 @@ def rank_cosmic_rows(cosmic_mutation_file_name, cosmic_CNV_file_name,
     calculate_CNV_frequency(cell_type_num_tumor_dict_CNV,
                             gene_cell_mutation_type_info_dict_CNV)
 
-    lymphoid_neoplasm_CNV_gene_set = set(CNV_gene_list)
+    all_mutated_gene = []
+    all_CNV_gene = []
+    for gene_cell_type in gene_cell_mutation_type_info_dict:
+        gene_cell_type_list = gene_cell_type.split(';')
+        gene = gene_cell_type_list[0]
+        all_mutated_gene.append(gene)
+    for gene_cell_type in gene_cell_mutation_type_info_dict_CNV:
+        gene_cell_type_list = gene_cell_type.split(';')
+        gene = gene_cell_type_list[0]
+        all_CNV_gene.append(gene)
+
+    all_mutated_gene_set = set(all_mutated_gene)
+    all_CNV_gene_set = set(all_CNV_gene)
+
+    only_CNV = all_CNV_gene_set.difference(all_mutated_gene_set)
+
+    print(len(only_CNV))
 
     # add CNV info into it
     # TODO can there be CNV that have more than 1 study but still
@@ -89,7 +105,7 @@ def rank_cosmic_rows(cosmic_mutation_file_name, cosmic_CNV_file_name,
         reproducible_and_CNV[gene_cell_type] = info
         CNV_key = gene + ';' + cell_type + ';' + 'CNV'
         # if this gene has a CNV
-        if CNV_key in lymphoid_neoplasm_CNV_gene_set:
+        if CNV_key in gene_cell_mutation_type_info_dict_CNV:
             # take first two part of this gene (gene name + cell type)
             # add 'CNV' to it, to get the CNV version of it
             this_gene_info = gene_cell_mutation_type_info_dict_CNV[
@@ -131,12 +147,18 @@ def rank_cosmic_rows(cosmic_mutation_file_name, cosmic_CNV_file_name,
     # turn dict into list, and sort them based on frequency
     known_l_chip_list_headings = [[
         'gene',
-        'T Cell Frequency Point', 'tumour num', 'total tumour num', 'position',
-        'B Cell Frequency Point', 'tumour num', 'total tumour num', 'position',
-        'Other Cell Frequency Point', 'tumour num', 'total tumour num', 'position',
-        'T Cell Frequency CNV', 'tumour num', 'total tumour num', 'position',
-        'B Cell Frequency CNV', 'tumour num', 'total tumour num', 'position',
-        'Other Cell Frequency CNV', 'tumour num', 'total tumour num', 'position',
+        'T Cell Frequency non-CNV', 'tumour num', 'total tumour num',
+        'only non-CNV', 'only CNV', 'both', 'position',
+        'T Cell Frequency CNV', 'tumour num', 'total tumour num',
+        'only non-CNV', 'only CNV', 'both', 'position',
+        'B Cell Frequency non-CNV', 'tumour num', 'total tumour num',
+        'only non-CNV', 'only CNV', 'both', 'position',
+        'B Cell Frequency CNV', 'tumour num', 'total tumour num',
+        'only non-CNV', 'only CNV', 'both', 'position',
+        'Other Cell Frequency non-CNV', 'tumour num', 'total tumour num',
+        'only non-CNV', 'only CNV', 'both', 'position',
+        'Other Cell Frequency CNV', 'tumour num', 'total tumour num',
+        'only non-CNV', 'only CNV', 'both', 'position',
         'CNV or not', 'found in healthy'
     ]]
 
@@ -149,7 +171,8 @@ def rank_cosmic_rows(cosmic_mutation_file_name, cosmic_CNV_file_name,
     convert_dict_list(potential_l_chip_dict,
                       potential_l_chip_list)
 
-    genes_in_healthy = which_genes_were_mutated_in_healthy(l_chip_gene_set_1, healthy_mutation_file_name)
+    genes_in_healthy = which_genes_were_mutated_in_healthy(l_chip_gene_set_1,
+                                                           healthy_mutation_file_name)
     unhealthy_genes = []
     for i in range(len(known_l_chip_list)):
         gene_info = known_l_chip_list[i]
@@ -163,26 +186,28 @@ def rank_cosmic_rows(cosmic_mutation_file_name, cosmic_CNV_file_name,
     print(unhealthy_genes)
 
 
-
     sorted_known_l_chip_list_T = sorted(known_l_chip_list,
                                         key=lambda x: float(x[1]), reverse=True)
-    sorted_known_l_chip_list_B = sorted(known_l_chip_list,
-                                        key=lambda x: float(x[5]), reverse=True)
-    sorted_known_l_chip_list_O = sorted(known_l_chip_list,
-                                        key=lambda x: float(x[9]), reverse=True)
     sorted_known_l_chip_list_TC = sorted(known_l_chip_list,
-                                        key=lambda x: float(x[13]), reverse=True)
+                                         key=lambda x: float(x[8]),
+                                         reverse=True)
+    sorted_known_l_chip_list_B = sorted(known_l_chip_list,
+                                        key=lambda x: float(x[15]), reverse=True)
     sorted_known_l_chip_list_BC = sorted(known_l_chip_list,
-                                        key=lambda x: float(x[17]), reverse=True)
+                                         key=lambda x: float(x[22]),
+                                         reverse=True)
+    sorted_known_l_chip_list_O = sorted(known_l_chip_list,
+                                        key=lambda x: float(x[29]), reverse=True)
     sorted_known_l_chip_list_OC = sorted(known_l_chip_list,
-                                        key=lambda x: float(x[21]), reverse=True)
+                                         key=lambda x: float(x[36]),
+                                         reverse=True)
+
 
     sorted_potential_l_chip_list = sorted(potential_l_chip_list,
                                           key=lambda x: float(x[1]),
                                           reverse=True)
 
-    print(list(sorted_potential_l_chip_list))
-
+    print(len(sorted_potential_l_chip_list))
 
     # write into files
     write_output(known_l_chip_list_headings + sorted_known_l_chip_list_T,
@@ -224,6 +249,9 @@ def read_mutation_file(cosmic_mutation_file_name,
                 if row[12] == 'NS':
                     continue
 
+                if row[21] == 'Substitution - coding silent':
+                    continue
+
                 histology = row[12]
                 if 'T_cell' in histology:
                     dict_key_name = gene_name + ';' + 'T_cell' + ';' + 'point'
@@ -253,7 +281,7 @@ def read_mutation_file(cosmic_mutation_file_name,
             # print(str(counter*100/3544360) + '%')
 
     for cell_type, tumour_list in cell_type_num_total_tumour_dict.items():
-        cell_type_num_total_tumour_dict[cell_type] = len(tumour_list)
+        cell_type_num_total_tumour_dict[cell_type] = len(set(tumour_list))
 
 
 def calculate_mutation_frequency(cell_type_num_tumour_dict,
@@ -279,7 +307,7 @@ def calculate_mutation_frequency(cell_type_num_tumour_dict,
 
 
 def read_CNV_file(cosmic_CNV_file_name, cell_type_num_total_tumor_dict_CNV,
-                  CNV_gene_list, gene_cell_mutation_type_dict_CNV,
+                  gene_cell_mutation_type_dict_CNV,
                   important_column_heading_list_CNV,
                   important_column_number_list_CNV):
     with open(cosmic_CNV_file_name) as CNV_file:
@@ -315,8 +343,6 @@ def read_CNV_file(cosmic_CNV_file_name, cell_type_num_total_tumor_dict_CNV,
                     specific_gene_histology_dict_CNV.setdefault(
                         column_heading, []).append(row[column_num])
 
-                CNV_gene_list.append(dict_key_name)
-
                 cell_type_num_total_tumor_dict_CNV.setdefault(cell_type,
                                                               []).append(row[4])
 
@@ -324,7 +350,7 @@ def read_CNV_file(cosmic_CNV_file_name, cell_type_num_total_tumor_dict_CNV,
             # print(str(counter*100/650643) + '%')
 
     for cell_type, tumour_list in cell_type_num_total_tumor_dict_CNV.items():
-        cell_type_num_total_tumor_dict_CNV[cell_type] = len(tumour_list)
+        cell_type_num_total_tumor_dict_CNV[cell_type] = len(set(tumour_list))
 
 
 def calculate_CNV_frequency(cell_type_num_tumour_dict_CNV,
@@ -352,7 +378,8 @@ def calculate_CNV_frequency(cell_type_num_tumour_dict_CNV,
 def filter_non_reproducible(lymphoid_neoplasm_gene_histology_dict,
                             reproducible):
     for gene_histology, info in lymphoid_neoplasm_gene_histology_dict.items():
-        if len(info['study id']) >= 2:
+        # for this gene, cell_type if it has more than 2 unique studies
+        if len(set(info['study id'])) >= 2:
             reproducible[
                 gene_histology] = info
 
@@ -371,8 +398,8 @@ def convert_dict_list(gene_cell_type_dict,
         specific_gene_dict = gene_dict.setdefault(gene, {})
         specific_gene_dict[cell_type + ' ' + mutation_type] = info
 
-    type_cell_mutation_list = ['T_cell point', 'B_cell point', 'Other point',
-                               'T_cell CNV', 'B_cell CNV', 'Other CNV']
+    type_cell_mutation_list = ['T_cell point', 'T_cell CNV', 'B_cell point',
+                               'B_cell CNV', 'Other point', 'Other CNV']
     for gene, cell_type_info_dict in gene_dict.items():
         l_chip_sublist = [gene]
         # each cell_type_info is a dict
@@ -380,26 +407,67 @@ def convert_dict_list(gene_cell_type_dict,
         for type_cell_mutation in type_cell_mutation_list:
             # if this combination of cell type and mutation type exist
             if type_cell_mutation in cell_type_info_dict:
+
+                # for this cell type, get both non-CNV and CNV tumour ids
+                single_type_cell_mutation_list = type_cell_mutation.split(' ')
+                cell_type = single_type_cell_mutation_list[0]
+
+                # get cell_type + ' ' + 'point' from cell_type_info_dict
+                #
+                # if it does not exist, return empty dict
+                # getting 'id tumour' from empty dict would not work
+                # so empty set is returned
+                #
+                # if cell_type + ' ' + 'point' does exist, then the info dict
+                # is returned, getting 'id tumour' from it would work
+                # so it is a list of non-unique tumour ids
+                # then I make it unique by turn the list into a set
+                unique_non_CNV_tumour_ids = set(
+                    cell_type_info_dict.get(cell_type + ' ' + 'point', {})
+                        .get('id tumour', set())
+                )
+                unique_CNV_tumour_ids = set(
+                    cell_type_info_dict.get(cell_type + ' ' + 'CNV', {})
+                        .get('id tumour', set())
+                )
+
+                # is in non_CNV, but not in CNV (non_CNV minus intersection)
+                only_non_CNV = len(unique_non_CNV_tumour_ids.difference(
+                    unique_CNV_tumour_ids))
+                # is in CNV, but not in non_CNV (CNV minus intersection)
+                only_CNV = len(unique_CNV_tumour_ids.difference(
+                    unique_non_CNV_tumour_ids))
+                both = len(unique_CNV_tumour_ids.intersection(
+                    unique_non_CNV_tumour_ids))
+
                 info = cell_type_info_dict[type_cell_mutation]
                 l_chip_sublist.append(info['frequency percentage'])
                 l_chip_sublist.append(info['num_tumour_gene_cell_type'])
                 l_chip_sublist.append(info['num_tumour_total_cell_type'])
+                l_chip_sublist.append(only_non_CNV)
+                l_chip_sublist.append(only_CNV)
+                l_chip_sublist.append(both)
                 l_chip_sublist.append(info['mutation genome position'])
-                print(info['study id'])
             else:
                 l_chip_sublist.append(0)
                 l_chip_sublist.append(0)
                 l_chip_sublist.append('n/a')
+                    # above is, in reality this is the same as all others
+                l_chip_sublist.append(0)
+                l_chip_sublist.append(0)
+                l_chip_sublist.append(0)
                 l_chip_sublist.append('n/a')
 
         if 'T_cell CNV' not in cell_type_info_dict \
                 and 'B_cell CNV' not in cell_type_info_dict \
                 and 'Other CNV' not in cell_type_info_dict:
-            l_chip_sublist.append('___')
-        else:
+            l_chip_sublist.append('not')
+        elif 'T_cell point' not in cell_type_info_dict \
+                and 'B_cell point' not in cell_type_info_dict \
+                and 'Other point' not in cell_type_info_dict:
             l_chip_sublist.append('CNV')
-
-        print()
+        else:
+            l_chip_sublist.append('both')
 
             # TODO other stuff we want in the table
 
@@ -414,8 +482,8 @@ def write_output(gene_set, file_name):
         genes_file_writer.writerows(gene_set)
 
 
-def which_genes_were_mutated_in_healthy(l_chip_gene_set_1_all, healthy_mutation_file):
-
+def which_genes_were_mutated_in_healthy(l_chip_gene_set_1_all,
+                                        healthy_mutation_file):
     gene_list = []
     with open(healthy_mutation_file) as healthy_mutation_file:
         lines = healthy_mutation_file.readlines()
@@ -426,12 +494,13 @@ def which_genes_were_mutated_in_healthy(l_chip_gene_set_1_all, healthy_mutation_
         gene_list.extend(stripped_lines)
     l_chip_gene_set_1_healthy_mutation = set(gene_list)
 
-    print('genes found mutated in healthy individuals', l_chip_gene_set_1_healthy_mutation)
+    print('genes found mutated in healthy individuals',
+          l_chip_gene_set_1_healthy_mutation)
 
     print(len(l_chip_gene_set_1_healthy_mutation))
 
-    return l_chip_gene_set_1_all.intersection(l_chip_gene_set_1_healthy_mutation)
-
+    return l_chip_gene_set_1_all.intersection(
+        l_chip_gene_set_1_healthy_mutation)
 
 
 if __name__ == "__main__":
