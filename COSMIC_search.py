@@ -2,11 +2,14 @@ import csv
 import sys
 import re
 import pandas as pd
-
+import matplotlib.pyplot as plt
 
 # how about, I take the cosmic files, calculate the frequency, then remove CNV
 # separate into 2 tsv outputs, one of m-chip vs l-chip paper,
 # one for every other gene
+
+
+
 
 
 def rank_cosmic_rows(cosmic_mutation_file_name, cosmic_CNV_file_name,
@@ -23,7 +26,7 @@ def rank_cosmic_rows(cosmic_mutation_file_name, cosmic_CNV_file_name,
         gene_list.extend(stripped_lines)
     l_chip_gene_set_1 = set(gene_list)
 
-    # these two should match
+    # these two should match (i.e. the 6th column should be id tumour)
     important_column_heading_list = ['id tumour', 'histology subtype 2',
                                      'histology subtype 3',
                                      'mutation CDS', 'mutation description',
@@ -48,6 +51,8 @@ def rank_cosmic_rows(cosmic_mutation_file_name, cosmic_CNV_file_name,
                        important_column_number_list,
                        gene_cell_mutation_type_info_dict)
 
+    construct_bp_individual_plot(gene_cell_mutation_type_info_dict)
+
     print('gene cell-type pair non-CNV', len(gene_cell_mutation_type_info_dict))
     print('non-CNV cell type distribution', cell_type_num_tumour_dict)
 
@@ -56,7 +61,6 @@ def rank_cosmic_rows(cosmic_mutation_file_name, cosmic_CNV_file_name,
         cell_type_num_tumour_dict,
         gene_cell_mutation_type_info_dict)
 
-    # filter out those not found in at least 2 studies
     # TODO change this to in more than 1 tumour
     # reproducible = {}
     # filter_non_reproducible(gene_cell_mutation_type_info_dict, reproducible)
@@ -99,7 +103,7 @@ def rank_cosmic_rows(cosmic_mutation_file_name, cosmic_CNV_file_name,
 
     # add CNV info into it
     # TODO can there be CNV that have more than 1 study but still
-    #   does not have more than 1 in point?
+    #   does not have more than 1 in point mutation?
     all_possible_l_chip_dict = {}
     for gene_cell_type, info in reproducible.items():
         gene_cell_type_list = gene_cell_type.split(';')
@@ -115,6 +119,8 @@ def rank_cosmic_rows(cosmic_mutation_file_name, cosmic_CNV_file_name,
                 CNV_key]
             all_possible_l_chip_dict[CNV_key] = this_gene_info
 
+
+    """this section is only for calculating remaining genes"""
     # TODO extract into functions
     # separate reproducible into 2 outputs files
     # known: in the gene set
@@ -146,6 +152,8 @@ def rank_cosmic_rows(cosmic_mutation_file_name, cosmic_CNV_file_name,
             remaining_genes.append(gene)
 
     print('remaining', len(remaining_genes))
+    write_output(remaining_genes, 'remaining_genes.xlsx')
+    """above section is only for calculating remaining genes"""
 
     # turn dict into list, and sort them based on frequency
     potential_l_chip_list_headings = [[
@@ -204,7 +212,7 @@ def rank_cosmic_rows(cosmic_mutation_file_name, cosmic_CNV_file_name,
     write_output(
         potential_l_chip_list_headings + sorted_all_possible_l_chip_list,
         'potential_l_chip.xlsx')
-    write_output(remaining_genes, 'remaining_genes.xlsx')
+
 
 
 def read_mutation_file(cosmic_mutation_file_name,
@@ -219,9 +227,10 @@ def read_mutation_file(cosmic_mutation_file_name,
             # 0, 4, 11, 12, 13, 14.  19, 21, 24, 25, 30
             # gene name, sample name, primary histology and its subtypes (3),
             # mutation CDS, mutation desc, GRch, mutation genome position, study id,
-            # if primary histology is lymphoid neoplasm
 
-            if row[11] == 'lymphoid_neoplasm':
+            # if primary histology is lymphoid_neoplasm
+            # if row[11] == 'lymphoid_neoplasm':
+            if row[11] == "haematopoietic_neoplasm":
                 # group mutations by gene name + histology subtype 1
                 gene_ensembl = row[0].split('_')
                 gene_name = gene_ensembl[0]
@@ -251,23 +260,29 @@ def read_mutation_file(cosmic_mutation_file_name,
                     continue
 
                 histology = row[12]
-                if 'T_cell' in histology or 'anaplastic' in histology \
-                        or 'lymphomatoid_papulosis' in histology \
-                        or 'post_transplant_lymphoproliferative_disorder' in histology \
-                        or 'mycosis_fungoides-Sezary_syndrome' in histology:
-                    dict_key_name = gene_name + ';' + 'T_cell' + ';' + 'point'
-                    cell_type = 'T_cell'
-                elif 'B_cell' in histology or 'Burkitt' in histology or 'chronic' in histology \
-                        or 'follicular_lymphoma' in histology or 'hairy' in histology \
-                        or 'hodgkin' in histology or 'lymphoplasmacytic_lymphoma' in histology \
-                        or 'mantle' in histology or 'marginal' in histology \
-                        or 'plasma_cell_myeloma' in histology or 'plasmacytoma' in histology \
-                        or 'effusion' in histology or 'MALT' in histology:
-                    dict_key_name = gene_name + ';' + 'B_cell' + ';' + 'point'
-                    cell_type = 'B_cell'
+                if 'myelo' in histology:
+                    dict_key_name = gene_name + ';' + 'myelo' + ';' + 'point'
+                    cell_type = 'myelo'
                 else:
-                    dict_key_name = gene_name + ';' + 'Other' + ';' + 'point'
-                    cell_type = 'Other'
+                    continue
+
+                # if 'T_cell' in histology or 'anaplastic' in histology \
+                #         or 'lymphomatoid_papulosis' in histology \
+                #         or 'post_transplant_lymphoproliferative_disorder' in histology \
+                #         or 'mycosis_fungoides-Sezary_syndrome' in histology:
+                #     dict_key_name = gene_name + ';' + 'T_cell' + ';' + 'point'
+                #     cell_type = 'T_cell'
+                # elif 'B_cell' in histology or 'Burkitt' in histology or 'chronic' in histology \
+                #         or 'follicular_lymphoma' in histology or 'hairy' in histology \
+                #         or 'hodgkin' in histology or 'lymphoplasmacytic_lymphoma' in histology \
+                #         or 'mantle' in histology or 'marginal' in histology \
+                #         or 'plasma_cell_myeloma' in histology or 'plasmacytoma' in histology \
+                #         or 'effusion' in histology or 'MALT' in histology:
+                #     dict_key_name = gene_name + ';' + 'B_cell' + ';' + 'point'
+                #     cell_type = 'B_cell'
+                # else:
+                #     dict_key_name = gene_name + ';' + 'Other' + ';' + 'point'
+                #     cell_type = 'Other'
 
                 specific_gene_cell_type_dict = gene_cell_mutation_type_dict.setdefault(
                     dict_key_name, {})
@@ -632,6 +647,138 @@ def which_genes_were_mutated_in_healthy(l_chip_gene_set_1_all,
 
     return l_chip_gene_set_1_all.intersection(
         l_chip_gene_set_1_healthy_mutation)
+
+
+def construct_bp_individual_plot(gene_cell_mutation_type_info_dict):
+
+    position_tumour = {}
+    tumour_position = {}
+    all_tumour_id = []
+
+    # group tumour id based on genomic position, and get all unique tumour ids
+    get_mapping_position_tumour(all_tumour_id,
+                                gene_cell_mutation_type_info_dict,
+                                position_tumour, tumour_position)
+    all_unique_tumour_id = list(set(all_tumour_id))
+
+    # extract all sets of tumour, remove duplicates within each set, remove duplicate set
+    # that is convert to set for all 'subset', and convert to multiset for all the collection of the subset
+    position_tumour_set_dict = {}
+    tumour_set_list = []
+    for position, tumour_ids in position_tumour.items():
+        tumour_ids_set = list(set(tumour_ids))
+        position_tumour_set_dict[position] = tumour_ids_set
+        tumour_set_list.append(tumour_ids_set)
+    unique_tumour_set_list = list(set(frozenset(item) for item in tumour_set_list))
+
+    # we now have
+    # a dict with genomic position to a list of tumour ids and its reverse
+    # a list of set of tumour ids
+    unique_tumour_set_list.sort(key=len)
+    covered_tumour_id = []
+    cover_sizes = [0]
+    cover_sizes_percentage = [0]
+
+    recurrent_unique_tumour_set_list = [tumour_set for tumour_set in unique_tumour_set_list if len(tumour_set) > 1]
+    recurrent_unique_tumour_id = list(set([tumour_id for tumour_set in recurrent_unique_tumour_set_list for tumour_id in tumour_set]))
+
+
+    print('total number of base pairs with recurrent mutations', len(recurrent_unique_tumour_set_list))
+    print('total number of tumours with recurrent mutations', len(recurrent_unique_tumour_id))
+
+    print('start finding cover')
+    # while len(covered_tumour_id) != len(all_unique_tumour_id):
+    # only until it cover 80%
+    while len(covered_tumour_id) < 26912 :
+        # the tumour ids of the position that current has the most tumour ids
+        tumour_ids_position_current_most_tumour = recurrent_unique_tumour_set_list.pop(-1)
+
+        # add the covered tumour ids, and keep only unique
+        covered_tumour_id.extend(tumour_ids_position_current_most_tumour)
+        covered_tumour_id = list(set(covered_tumour_id))
+        cover_sizes.append(len(covered_tumour_id))
+        cover_sizes_percentage.append(len(covered_tumour_id)/33640)
+        print(len(covered_tumour_id)/33640)
+
+        # for every other set, subtract tumour ids in current
+        # then add to new list
+        new_unique_tumour_set_list = []
+        for tumour_set in recurrent_unique_tumour_set_list:
+            new_tumour_set = tumour_set.difference(tumour_ids_position_current_most_tumour)
+            new_unique_tumour_set_list.append(new_tumour_set)
+
+        # sort the new list, and reassign
+        new_unique_tumour_set_list.sort(key=len)
+        recurrent_unique_tumour_set_list = new_unique_tumour_set_list
+
+    print(len(cover_sizes_percentage) - 1, 'probes are required to achieve 80% coverage')
+    print(cover_sizes_percentage)
+
+    plt.plot(cover_sizes_percentage, linewidth=1)
+    plt.ylabel('percentage of tumour covered')
+    plt.xlabel('number of bp selected')
+    plt.title('coverage of tumours from bp')
+    plt.savefig('stop_at_90.pdf')
+
+
+    "so this is actually a set cover problem, whose naive greedy algorithm produces" \
+    "a solution with the upper bound of OPT log_e n where OPT is the optimal" \
+    "solution and the n the total number of element (size of the universe)" \
+    "our unique n = 35566 , so about the optimal solution is at most 11 times smaller"
+    "there is faster greedy algorithms, see wikipedia or CLRS"
+    "the number of sets is 9915"
+    "there is a 9:5073770 with 17333"
+
+    "since we are trying to cover mutation with a probe of 100 bp, so we " \
+    "changing the subset's definition to from 'all unique tumours at a bp' to" \
+    "'all unique tumour within a 80bp window' this mean we increase the subset size" \
+    "now the approximation ratio does not change since it depend on universe size," \
+    "which has not changed, but the optimal solution has become smaller, how much smaller?" \
+    "I don't know, not sure if it has to do with the fact that we dont know the" \
+    "optimal solution to begin with "
+
+
+
+    sys.exit()
+
+
+def get_mapping_position_tumour(all_tumour_id,
+                                gene_cell_mutation_type_info_dict,
+                                position_tumour, tumour_position):
+    for gene_cell_type, info in gene_cell_mutation_type_info_dict.items():
+        # assert len(info['mutation genome position']) == len(info['id tumour'])
+        for i in range(len(info['mutation genome position'])):
+            chromosome_position_range = info['mutation genome position'][i]
+            tumour_id = info['id tumour'][i]
+            if chromosome_position_range != 'null' and chromosome_position_range != 'null':
+
+                # all genomic position are in the format a:b-c
+                # where a is the chromosome number, followed by a semicolon
+                # b is the start of the range, followed by a dash
+                # c si the end of the range, followed by nothing
+                # a single base pair mutation is denoted as having the
+                # same start and end of the range
+                semicolon_index = chromosome_position_range.index(':')
+                dash_index = chromosome_position_range.index('-')
+                position_range_start = chromosome_position_range[
+                                       semicolon_index + 1:dash_index]
+                position_range_end = chromosome_position_range[dash_index + 1:]
+
+                position_list = list(range(int(position_range_start),
+                                           int(position_range_end) + 1))
+
+                # remove mutation with greater than 30bp
+                if int(position_range_end) > int(position_range_start) + 30:
+                    continue
+
+                chromosome = chromosome_position_range[:semicolon_index]
+                for position in position_list:
+                    chromosome_position = chromosome + ':' + str(position)
+                    position_tumour.setdefault(chromosome_position, []).append(
+                        tumour_id)
+                    tumour_position.setdefault(tumour_id, []).append(chromosome_position)
+
+                all_tumour_id.append(tumour_id)
 
 
 if __name__ == "__main__":
