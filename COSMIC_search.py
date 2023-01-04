@@ -4,158 +4,116 @@ import re
 import pandas as pd
 import matplotlib.pyplot as plt
 
-# how about, I take the cosmic files, calculate the frequency, then remove CNV
-# separate into 2 tsv outputs, one of m-chip vs l-chip paper,
-# one for every other gene
+
+def read_file_choose_cancer(cosmic_mutation_file_name):
+    all_primary_tissue_set = []
+    all_primary_histology_set = []
+    all_histology_subtype_one_set = []
 
 
+    with open(cosmic_mutation_file_name) as mutation_file:
+        csv_reader = csv.reader(mutation_file, delimiter=',')
+
+        for row in csv_reader:
+            all_primary_tissue_set = row[7]
+
+    all_primary_tissue_set = set(all_primary_tissue_set)
+    print("choose primary tissue you want to target from the list below")
+    print(all_primary_tissue_set)
+    # TODO read from user input
+    chosen_primary_tissue_set = []
 
 
+    with open(cosmic_mutation_file_name) as mutation_file:
+        csv_reader = csv.reader(mutation_file, delimiter=',')
+        for row in csv_reader:
+            if row[7] in chosen_primary_tissue_set:
+                all_primary_histology_set.append(row[11])
 
-def rank_cosmic_rows(cosmic_mutation_file_name, cosmic_CNV_file_name,
-                     gene_list_file, healthy_mutation_file_name):
-    # read known l-chip gene lists
+    all_primary_histology_set = set(all_primary_histology_set)
+    print("choose primary histology you want to target from the list below")
+    print(all_primary_histology_set)
+    # TODO read from user input
+    chosen_primary_histology_set = []
+
+
+    with open(cosmic_mutation_file_name) as mutation_file:
+        csv_reader = csv.reader(mutation_file, delimiter=',')
+        for row in csv_reader:
+            if row[7] in chosen_primary_tissue_set and row[11] in chosen_primary_histology_set:
+                all_histology_subtype_one_set.append(row[12])
+
+    all_histology_subtype_one_set = set(all_histology_subtype_one_set)
+    print("choose histology_subtype_one you want to target from the list below")
+    print(all_histology_subtype_one_set)
+    # TODO read from user input
+    chosen_histology_subtype_one_set = []
+
+
+def main(cosmic_mutation_file_name, cosmic_CNV_file_name,
+         gene_list_file, healthy_mutation_file_name):
+
+
+    # chosen_set = []
+    read_file_choose_cancer(cosmic_mutation_file_name)
+
     # TODO this is where you add more genes, from other papers
     gene_list = []
-    with open(gene_list_file) as gene_list_file:
-        lines = gene_list_file.readlines()
-        stripped_lines = []
-        for line in lines:
-            stripped_line = line.strip()
-            stripped_lines.append(stripped_line)
-        gene_list.extend(stripped_lines)
-    l_chip_gene_set_1 = set(gene_list)
+    l_chip_gene_set_1 = read_selected_genes(gene_list, gene_list_file)
 
-    # these two should match (i.e. the 6th column should be id tumour)
-    important_column_heading_list = ['id tumour', 'histology subtype 2',
-                                     'histology subtype 3',
-                                     'mutation CDS', 'mutation description',
-                                     'GRch', 'mutation genome position',
-                                     'study id']
-    important_column_number_list = [6, 13, 14, 19, 21, 24, 25, 30]
+    important_column_heading_list, important_column_heading_list_CNV, important_column_number_list, important_column_number_list_CNV = define_important_columns()
 
-    important_column_heading_list_CNV = ['id tumour', 'histology subtype 2',
-                                         'histology subtype 3',
-                                         'study id',
-                                         'GRch', 'mutation genome position']
-    important_column_number_list_CNV = [4, 11, 12, 17, 18, 19]
+    # TODO: read only from mutation chosen set
+    gene_cell_mutation_type_info_dict = {}
+    read_process_file_point_mutation(cosmic_mutation_file_name,
+                                     gene_cell_mutation_type_info_dict,
+                                     important_column_heading_list,
+                                     important_column_number_list)
 
-    gene_cell_mutation_type_info_dict = dict()
-    cell_type_num_tumour_dict = {}
-
-    # read mutation, group by gene+cell+mutation type (in gene_cell_mutation_type_info_dict)
-    # and count how many sample each cell type has (in cell_type_num_tumour_dict)
-    read_mutation_file(cosmic_mutation_file_name,
-                       cell_type_num_tumour_dict,
-                       important_column_heading_list,
-                       important_column_number_list,
-                       gene_cell_mutation_type_info_dict)
-
-    construct_bp_individual_plot(gene_cell_mutation_type_info_dict)
-
-    print('gene cell-type pair non-CNV', len(gene_cell_mutation_type_info_dict))
-    print('non-CNV cell type distribution', cell_type_num_tumour_dict)
-
-    # and store in gene_cell_mutation_type_info_dict
-    calculate_mutation_frequency(
-        cell_type_num_tumour_dict,
+    categorize_then_choose_probe_placement_within(
         gene_cell_mutation_type_info_dict)
 
-    # TODO change this to in more than 1 tumour
-    # reproducible = {}
-    # filter_non_reproducible(gene_cell_mutation_type_info_dict, reproducible)
-    # print('reproducible', len(reproducible))
-    reproducible = gene_cell_mutation_type_info_dict
-
-    # read CNV
     gene_cell_mutation_type_info_dict_CNV = {}
-    cell_type_num_tumor_dict_CNV = {}
-    read_CNV_file(cosmic_CNV_file_name,
-                  cell_type_num_tumor_dict_CNV,
-                  gene_cell_mutation_type_info_dict_CNV,
-                  important_column_heading_list_CNV,
-                  important_column_number_list_CNV)
+    read_process_file_CNV_mutation(cosmic_CNV_file_name,
+                                   gene_cell_mutation_type_info_dict_CNV,
+                                   important_column_heading_list_CNV,
+                                   important_column_number_list_CNV)
 
-    print('gene cell-type pair CNV', len(gene_cell_mutation_type_info_dict_CNV))
-    print('CNV cell type distribution', cell_type_num_tumor_dict_CNV)
+    find_num_gene_only_CNV(gene_cell_mutation_type_info_dict,
+                           gene_cell_mutation_type_info_dict_CNV)
 
-    # and store in gene_cell_mutation_type_info_dict_CNV
-    calculate_CNV_frequency(cell_type_num_tumor_dict_CNV,
-                            gene_cell_mutation_type_info_dict_CNV)
-
-    all_mutated_gene = []
-    all_CNV_gene = []
-    for gene_cell_type in gene_cell_mutation_type_info_dict:
-        gene_cell_type_list = gene_cell_type.split(';')
-        gene = gene_cell_type_list[0]
-        all_mutated_gene.append(gene)
-    for gene_cell_type in gene_cell_mutation_type_info_dict_CNV:
-        gene_cell_type_list = gene_cell_type.split(';')
-        gene = gene_cell_type_list[0]
-        all_CNV_gene.append(gene)
-
-    all_mutated_gene_set = set(all_mutated_gene)
-    all_CNV_gene_set = set(all_CNV_gene)
-
-    only_CNV = all_CNV_gene_set.difference(all_mutated_gene_set)
-
-    print('num gene only CNV', len(only_CNV))
-
-    # add CNV info into it
-    # TODO can there be CNV that have more than 1 study but still
-    #   does not have more than 1 in point mutation?
     all_possible_l_chip_dict = {}
-    for gene_cell_type, info in reproducible.items():
-        gene_cell_type_list = gene_cell_type.split(';')
-        gene = gene_cell_type_list[0]
-        cell_type = gene_cell_type_list[1]
-        all_possible_l_chip_dict[gene_cell_type] = info
-        CNV_key = gene + ';' + cell_type + ';' + 'CNV'
-        # if this gene has a CNV
-        if CNV_key in gene_cell_mutation_type_info_dict_CNV:
-            # take first two part of this gene (gene name + cell type)
-            # add 'CNV' to it, to get the CNV version of it
-            this_gene_info = gene_cell_mutation_type_info_dict_CNV[
-                CNV_key]
-            all_possible_l_chip_dict[CNV_key] = this_gene_info
+    integrate_CNV_point_mutation_info(all_possible_l_chip_dict,
+                                      gene_cell_mutation_type_info_dict,
+                                      gene_cell_mutation_type_info_dict_CNV)
 
-
-    """this section is only for calculating remaining genes"""
-    # TODO extract into functions
-    # separate reproducible into 2 outputs files
-    # known: in the gene set
-    # potential: not in the gene set
-    known_l_chip_dict = {}
-    potential_l_chip_dict = {}
-    for gene_histology, info in all_possible_l_chip_dict.items():
-        gene_histology_list = gene_histology.split(';')
-        gene = gene_histology_list[0]
-        if gene in l_chip_gene_set_1:
-            known_l_chip_dict[gene_histology] = info
-        else:
-            potential_l_chip_dict[gene_histology] = info
-
-    print('known l chip gene cell-type pair', len(known_l_chip_dict))
-    print('potential l chip gene cell-type pair', len(potential_l_chip_dict))
-
-    remaining_genes = []
-
-    known_l_chip_gene_list = []
-    for gene_histology in list(known_l_chip_dict.keys()):
-        gene_histology_list = gene_histology.split(';')
-        gene = gene_histology_list[0]
-        known_l_chip_gene_list.append(gene)
-    known_l_chip_dict_set = set(known_l_chip_gene_list)
-
-    for gene in l_chip_gene_set_1:
-        if gene not in known_l_chip_dict_set:
-            remaining_genes.append(gene)
-
-    print('remaining', len(remaining_genes))
-    write_output(remaining_genes, 'remaining_genes.xlsx')
-    """above section is only for calculating remaining genes"""
+    find_genes_in_cosmic_and_paper_in_paper_not_in_cosmic(
+        all_possible_l_chip_dict, l_chip_gene_set_1)
 
     # turn dict into list, and sort them based on frequency
+    potential_l_chip_list_headings = define_output_file_heading()
+
+    all_possible_l_chip_list = []
+    convert_dict_list(all_possible_l_chip_dict,
+                      all_possible_l_chip_list)
+
+    process_healthy_genes_paper_genes(all_possible_l_chip_list,
+                                      healthy_mutation_file_name,
+                                      l_chip_gene_set_1)
+
+    sorted_all_possible_l_chip_list = sorted(all_possible_l_chip_list,
+                                             key=lambda x: float(x[1]),
+                                             reverse=True)
+
+    print('num all genes', len(sorted_all_possible_l_chip_list))
+
+    # write into files
+    write_output(
+        potential_l_chip_list_headings + sorted_all_possible_l_chip_list,
+        'potential_l_chip.xlsx')
+
+
+def define_output_file_heading():
     potential_l_chip_list_headings = [[
         'gene',
         'T Cell Frequency non-CNV', 'tumour num', 'total tumour num',
@@ -172,11 +130,12 @@ def rank_cosmic_rows(cosmic_mutation_file_name, cosmic_CNV_file_name,
         'only non-CNV', 'only CNV', 'both', 'position',
         'CNV or not', 'found in healthy', 'in paper 1', 'in paper 2'
     ]]
+    return potential_l_chip_list_headings
 
-    all_possible_l_chip_list = []
-    convert_dict_list(all_possible_l_chip_dict,
-                      all_possible_l_chip_list)
 
+def process_healthy_genes_paper_genes(all_possible_l_chip_list,
+                                      healthy_mutation_file_name,
+                                      l_chip_gene_set_1):
     genes_in_healthy = which_genes_were_mutated_in_healthy(l_chip_gene_set_1,
                                                            healthy_mutation_file_name)
     unhealthy_genes = []
@@ -188,12 +147,9 @@ def rank_cosmic_rows(cosmic_mutation_file_name, cosmic_CNV_file_name,
         else:
             all_possible_l_chip_list[i].append('___')
             unhealthy_genes.append(gene)
-
     print('num genes found in healthy individuals', len(genes_in_healthy))
     print('genes found mutated in healthy individuals', genes_in_healthy)
-
     print('num genes not found in healthy individuals', len(unhealthy_genes))
-
     for i in range(len(all_possible_l_chip_list)):
         gene_info = all_possible_l_chip_list[i]
         gene = gene_info[0]
@@ -202,17 +158,147 @@ def rank_cosmic_rows(cosmic_mutation_file_name, cosmic_CNV_file_name,
         else:
             all_possible_l_chip_list[i].append('___')
 
-    sorted_all_possible_l_chip_list = sorted(all_possible_l_chip_list,
-                                             key=lambda x: float(x[1]),
-                                             reverse=True)
 
-    print('num all genes', len(sorted_all_possible_l_chip_list))
+def find_genes_in_cosmic_and_paper_in_paper_not_in_cosmic(
+        all_possible_l_chip_dict, l_chip_gene_set_1):
+    """this section is only for calculating remaining genes"""
+    # separate gene_cell_mutation_type_info_dict into 2 outputs files
+    # known: in the gene set
+    # potential: not in the gene set
+    known_l_chip_dict = {}
+    potential_l_chip_dict = {}
+    for gene_histology, info in all_possible_l_chip_dict.items():
+        gene_histology_list = gene_histology.split(';')
+        gene = gene_histology_list[0]
+        if gene in l_chip_gene_set_1:
+            known_l_chip_dict[gene_histology] = info
+        else:
+            potential_l_chip_dict[gene_histology] = info
 
-    # write into files
-    write_output(
-        potential_l_chip_list_headings + sorted_all_possible_l_chip_list,
-        'potential_l_chip.xlsx')
+    # in the initial 235 ones
+    print('known l chip gene cell-type pair', len(known_l_chip_dict))
+    # not in the 235
+    print('potential l chip gene cell-type pair', len(potential_l_chip_dict))
 
+    remaining_genes = []
+    known_l_chip_gene_list = []
+    for gene_histology in list(known_l_chip_dict.keys()):
+        gene_histology_list = gene_histology.split(';')
+        gene = gene_histology_list[0]
+        known_l_chip_gene_list.append(gene)
+    known_l_chip_dict_set = set(known_l_chip_gene_list)
+    for gene in l_chip_gene_set_1:
+        if gene not in known_l_chip_dict_set:
+            remaining_genes.append(gene)
+
+    # the genes in 235, but not found on cosmic
+    print('remaining', len(remaining_genes))
+    write_output(remaining_genes, 'remaining_genes.xlsx')
+
+
+def integrate_CNV_point_mutation_info(all_possible_l_chip_dict,
+                                      gene_cell_mutation_type_info_dict,
+                                      gene_cell_mutation_type_info_dict_CNV):
+    # add CNV info into it
+    # TODO can there be CNV that have more than 1 study but still
+    #   does not have more than 1 in point mutation?
+    for gene_cell_type, info in gene_cell_mutation_type_info_dict.items():
+        gene_cell_type_list = gene_cell_type.split(';')
+        gene = gene_cell_type_list[0]
+        cell_type = gene_cell_type_list[1]
+        all_possible_l_chip_dict[gene_cell_type] = info
+        CNV_key = gene + ';' + cell_type + ';' + 'CNV'
+        # if this gene has a CNV
+        if CNV_key in gene_cell_mutation_type_info_dict_CNV:
+            # take first two part of this gene (gene name + cell type)
+            # add 'CNV' to it, to get the CNV version of it
+            this_gene_info = gene_cell_mutation_type_info_dict_CNV[
+                CNV_key]
+            all_possible_l_chip_dict[CNV_key] = this_gene_info
+
+
+def find_num_gene_only_CNV(gene_cell_mutation_type_info_dict,
+                           gene_cell_mutation_type_info_dict_CNV):
+    all_mutated_gene = []
+    all_CNV_gene = []
+    for gene_cell_type in gene_cell_mutation_type_info_dict:
+        gene_cell_type_list = gene_cell_type.split(';')
+        gene = gene_cell_type_list[0]
+        all_mutated_gene.append(gene)
+    for gene_cell_type in gene_cell_mutation_type_info_dict_CNV:
+        gene_cell_type_list = gene_cell_type.split(';')
+        gene = gene_cell_type_list[0]
+        all_CNV_gene.append(gene)
+    all_mutated_gene_set = set(all_mutated_gene)
+    all_CNV_gene_set = set(all_CNV_gene)
+    only_CNV = all_CNV_gene_set.difference(all_mutated_gene_set)
+    print('num gene only CNV', len(only_CNV))
+
+
+def read_process_file_CNV_mutation(cosmic_CNV_file_name,
+                                   gene_cell_mutation_type_info_dict_CNV,
+                                   important_column_heading_list_CNV,
+                                   important_column_number_list_CNV):
+    # each gene cell-type refers to the gene ABC in t-cell CNV
+
+    cell_type_num_tumor_dict_CNV = {}
+    read_CNV_file(cosmic_CNV_file_name,
+                  cell_type_num_tumor_dict_CNV,
+                  gene_cell_mutation_type_info_dict_CNV,
+                  important_column_heading_list_CNV,
+                  important_column_number_list_CNV)
+    print('gene cell-type pair CNV', len(gene_cell_mutation_type_info_dict_CNV))
+    print('CNV cell type distribution', cell_type_num_tumor_dict_CNV)
+    # and store in gene_cell_mutation_type_info_dict_CNV
+    calculate_CNV_frequency(cell_type_num_tumor_dict_CNV,
+                            gene_cell_mutation_type_info_dict_CNV)
+
+
+def read_process_file_point_mutation(cosmic_mutation_file_name,
+                                     gene_cell_mutation_type_info_dict,
+                                     important_column_heading_list,
+                                     important_column_number_list):
+    # read mutation, group by gene+cell+mutation type (in gene_cell_mutation_type_info_dict)
+    # and count how many sample each cell type has (in cell_type_num_tumour_dict)
+    cell_type_num_tumour_dict = {}
+    read_mutation_file(cosmic_mutation_file_name,
+                       cell_type_num_tumour_dict,
+                       important_column_heading_list,
+                       important_column_number_list,
+                       gene_cell_mutation_type_info_dict)
+    print('gene cell-type pair non-CNV', len(gene_cell_mutation_type_info_dict))
+    print('tumour distribution for each point mutation cell type ', cell_type_num_tumour_dict)
+    # and store in gene_cell_mutation_type_info_dict
+    calculate_mutation_frequency(cell_type_num_tumour_dict,
+                                 gene_cell_mutation_type_info_dict)
+
+
+def define_important_columns():
+    # these two should match (i.e. the 6th column should be id tumour)
+    important_column_heading_list = ['id tumour', 'histology subtype 2',
+                                     'histology subtype 3',
+                                     'mutation CDS', 'mutation description',
+                                     'GRch', 'mutation genome position',
+                                     'study id']
+    important_column_number_list = [6, 13, 14, 19, 21, 24, 25, 30]
+    important_column_heading_list_CNV = ['id tumour', 'histology subtype 2',
+                                         'histology subtype 3',
+                                         'study id',
+                                         'GRch', 'mutation genome position']
+    important_column_number_list_CNV = [4, 11, 12, 17, 18, 19]
+    return important_column_heading_list, important_column_heading_list_CNV, important_column_number_list, important_column_number_list_CNV
+
+
+def read_selected_genes(gene_list, gene_list_file):
+    with open(gene_list_file) as gene_list_file:
+        lines = gene_list_file.readlines()
+        stripped_lines = []
+        for line in lines:
+            stripped_line = line.strip()
+            stripped_lines.append(stripped_line)
+        gene_list.extend(stripped_lines)
+    l_chip_gene_set_1 = set(gene_list)
+    return l_chip_gene_set_1
 
 
 def read_mutation_file(cosmic_mutation_file_name,
@@ -229,8 +315,8 @@ def read_mutation_file(cosmic_mutation_file_name,
             # mutation CDS, mutation desc, GRch, mutation genome position, study id,
 
             # if primary histology is lymphoid_neoplasm
-            # if row[11] == 'lymphoid_neoplasm':
-            if row[11] == "haematopoietic_neoplasm":
+            # if row[11] == "haematopoietic_neoplasm":
+            if row[11] == 'lymphoid_neoplasm':
                 # group mutations by gene name + histology subtype 1
                 gene_ensembl = row[0].split('_')
                 gene_name = gene_ensembl[0]
@@ -260,29 +346,29 @@ def read_mutation_file(cosmic_mutation_file_name,
                     continue
 
                 histology = row[12]
-                if 'myelo' in histology:
-                    dict_key_name = gene_name + ';' + 'myelo' + ';' + 'point'
-                    cell_type = 'myelo'
-                else:
-                    continue
-
-                # if 'T_cell' in histology or 'anaplastic' in histology \
-                #         or 'lymphomatoid_papulosis' in histology \
-                #         or 'post_transplant_lymphoproliferative_disorder' in histology \
-                #         or 'mycosis_fungoides-Sezary_syndrome' in histology:
-                #     dict_key_name = gene_name + ';' + 'T_cell' + ';' + 'point'
-                #     cell_type = 'T_cell'
-                # elif 'B_cell' in histology or 'Burkitt' in histology or 'chronic' in histology \
-                #         or 'follicular_lymphoma' in histology or 'hairy' in histology \
-                #         or 'hodgkin' in histology or 'lymphoplasmacytic_lymphoma' in histology \
-                #         or 'mantle' in histology or 'marginal' in histology \
-                #         or 'plasma_cell_myeloma' in histology or 'plasmacytoma' in histology \
-                #         or 'effusion' in histology or 'MALT' in histology:
-                #     dict_key_name = gene_name + ';' + 'B_cell' + ';' + 'point'
-                #     cell_type = 'B_cell'
+                # if 'myelo' in histology:
+                #     dict_key_name = gene_name + ';' + 'myelo' + ';' + 'point'
+                #     cell_type = 'myelo'
                 # else:
-                #     dict_key_name = gene_name + ';' + 'Other' + ';' + 'point'
-                #     cell_type = 'Other'
+                #     continue
+
+                if 'T_cell' in histology or 'anaplastic' in histology \
+                        or 'lymphomatoid_papulosis' in histology \
+                        or 'post_transplant_lymphoproliferative_disorder' in histology \
+                        or 'mycosis_fungoides-Sezary_syndrome' in histology:
+                    dict_key_name = gene_name + ';' + 'T_cell' + ';' + 'point'
+                    cell_type = 'T_cell'
+                elif 'B_cell' in histology or 'Burkitt' in histology or 'chronic' in histology \
+                        or 'follicular_lymphoma' in histology or 'hairy' in histology \
+                        or 'hodgkin' in histology or 'lymphoplasmacytic_lymphoma' in histology \
+                        or 'mantle' in histology or 'marginal' in histology \
+                        or 'plasma_cell_myeloma' in histology or 'plasmacytoma' in histology \
+                        or 'effusion' in histology or 'MALT' in histology:
+                    dict_key_name = gene_name + ';' + 'B_cell' + ';' + 'point'
+                    cell_type = 'B_cell'
+                else:
+                    dict_key_name = gene_name + ';' + 'Other' + ';' + 'point'
+                    cell_type = 'Other'
 
                 specific_gene_cell_type_dict = gene_cell_mutation_type_dict.setdefault(
                     dict_key_name, {})
@@ -526,15 +612,6 @@ def calculate_CNV_frequency(cell_type_num_tumour_dict_CNV,
         info['num_tumour_total_cell_type'] = num_tumour_total_cell_type
 
 
-def filter_non_reproducible(lymphoid_neoplasm_gene_histology_dict,
-                            reproducible):
-    for gene_histology, info in lymphoid_neoplasm_gene_histology_dict.items():
-        # for this gene, cell_type if it has more than 2 unique studies
-        if len(set(info['study id'])) >= 2:
-            reproducible[
-                gene_histology] = info
-
-
 def convert_dict_list(gene_cell_type_dict,
                       l_chip_list):
     # first group different gene_cell_type into gene
@@ -632,7 +709,6 @@ def write_output(gene_set, file_name):
     writer.save()
 
 
-
 def which_genes_were_mutated_in_healthy(l_chip_gene_set_1_all,
                                         healthy_mutation_file):
     gene_list = []
@@ -649,75 +725,159 @@ def which_genes_were_mutated_in_healthy(l_chip_gene_set_1_all,
         l_chip_gene_set_1_healthy_mutation)
 
 
-def construct_bp_individual_plot(gene_cell_mutation_type_info_dict):
+def separate_gene_cell_mutation_type_info_dict(cell_mutation_type_dict,
+                                               gene_cell_mutation_type_info_dict):
+    for gene_cell_mutation_type, info in gene_cell_mutation_type_info_dict.items():
+        gene_cell_mutation_type_list = gene_cell_mutation_type.split(';')
+        gene = gene_cell_mutation_type_list[0]
+        cell_type = gene_cell_mutation_type_list[1]
+        mutation_type = gene_cell_mutation_type_list[2]
+        cell_mutation_type = cell_type + ';' + mutation_type
+        cell_mutation_type_dict[cell_mutation_type][gene] = info
 
-    position_tumour = {}
-    tumour_position = {}
+
+def categorize_then_choose_probe_placement_within(gene_cell_mutation_type_info_dict,
+                                                  targeting_window_size=80,
+                                                  cumulative_contribution_threshold=90,
+                                                  indel_filter_threshold=30,
+                                                  recurrent_definition=2):
+
+    cell_mutation_type_dict = {
+        'T_cell;point': {}, 'B_cell;point': {}, 'Other;point': {},
+    }
+    type_probe_dict = {
+        'T_cell;point': {}, 'B_cell;point': {}, 'Other;point': {},
+    }
+
+    separate_gene_cell_mutation_type_info_dict(cell_mutation_type_dict,
+                                               gene_cell_mutation_type_info_dict)
+
+    for cell_mutation_type, gene_info_dict in cell_mutation_type_dict.items():
+
+        choose_probe_placement(gene_info_dict, type_probe_dict, cell_mutation_type,
+                               cumulative_contribution_threshold, targeting_window_size,
+                               indel_filter_threshold, recurrent_definition)
+
+    for cell_mutation_type, probe_info in type_probe_dict.items():
+        # total number of probe to cover at the threshold
+        num_probe_percentage_cover_threshold = probe_info[0]
+        # a list of list with location and cumulative contribution
+        probe_location_cc_list = probe_info[1]
+        print("we need", num_probe_percentage_cover_threshold, "probes to cover",
+              cumulative_contribution_threshold, "% of the tumours in",
+              cell_mutation_type, ", their locations are:")
+        for probe_location_cc in probe_location_cc_list:
+            print('\t', probe_location_cc)
+
+        write_output(probe_location_cc_list, cell_mutation_type + 'probe.xlsx')
+
+
+
+def choose_probe_placement(gene_cell_mutation_type_info_dict, type_probe_dict,
+                           cell_mutation_type, cumulative_contribution_threshold,
+                           targeting_window_size, indel_filter_threshold,
+                           recurrent_definition):
+
     all_tumour_id = []
+    gene_tumour_position = {}
 
-    # group tumour id based on genomic position, and get all unique tumour ids
-    get_mapping_position_tumour(all_tumour_id,
-                                gene_cell_mutation_type_info_dict,
-                                position_tumour, tumour_position)
-    all_unique_tumour_id = list(set(all_tumour_id))
+    # group tumour id based on genomic position
+    get_mapping_position_tumour(all_tumour_id, gene_tumour_position,
+                                gene_cell_mutation_type_info_dict, indel_filter_threshold)
 
-    # extract all sets of tumour, remove duplicates within each set, remove duplicate set
-    # that is convert to set for all 'subset', and convert to multiset for all the collection of the subset
-    position_tumour_set_dict = {}
+    all_possible_probe_tumour_dict = {}
+    find_all_potential_probe_placement(gene_tumour_position,
+                                       all_possible_probe_tumour_dict,
+                                       recurrent_definition, targeting_window_size)
+
+    # extract all sets of tumour, remove duplicates within each set, remove
+    # duplicate set. that is convert to set for all 'subset', and convert to
+    # multiset for all the collection of the subset remove duplicates and count
+    # number of unique tumours this is to know the number of (recurrent) unique tumours
     tumour_set_list = []
-    for position, tumour_ids in position_tumour.items():
-        tumour_ids_set = list(set(tumour_ids))
-        position_tumour_set_dict[position] = tumour_ids_set
-        tumour_set_list.append(tumour_ids_set)
-    unique_tumour_set_list = list(set(frozenset(item) for item in tumour_set_list))
+    for gene_cell_type, position_tumour_dict_list in gene_tumour_position.items():
+        position_tumour = position_tumour_dict_list[0]
+        for position, tumour_ids in position_tumour.items():
+            tumour_ids_set = list(set(tumour_ids))
+            tumour_set_list.append(tumour_ids_set)
+    unique_tumour_set_list = list(
+        set(frozenset(item) for item in tumour_set_list))
 
     # we now have
     # a dict with genomic position to a list of tumour ids and its reverse
     # a list of set of tumour ids
     unique_tumour_set_list.sort(key=len)
     covered_tumour_id = []
-    cover_sizes = [0]
     cover_sizes_percentage = [0]
 
-    recurrent_unique_tumour_set_list = [tumour_set for tumour_set in unique_tumour_set_list if len(tumour_set) > 1]
-    recurrent_unique_tumour_id = list(set([tumour_id for tumour_set in recurrent_unique_tumour_set_list for tumour_id in tumour_set]))
+    # recurrent mutation here is a base pair that is mutated in multiple tumour
+    # since each tumour set is a set a tumour that is mutated at that position
+    # keep only recurrent mutations, means only using sets with >=2 tumour
+    # which is the default recurrent definition
+    recurrent_unique_tumour_set_list = [tumour_set
+                                        for tumour_set in unique_tumour_set_list
+                                        if len(tumour_set) >= recurrent_definition]
+    # then only keep these tumour id
+    recurrent_unique_tumour_id = list(set([tumour_id
+                                           for tumour_set in
+                                           recurrent_unique_tumour_set_list
+                                           for tumour_id in tumour_set]))
 
-
-    print('total number of base pairs with recurrent mutations', len(recurrent_unique_tumour_set_list))
-    print('total number of tumours with recurrent mutations', len(recurrent_unique_tumour_id))
+    print('total number of base pairs with recurrent mutations',
+          len(recurrent_unique_tumour_set_list))
+    print('total number of tumours with recurrent mutations',
+          len(recurrent_unique_tumour_id))
+    print('total number of possible probes',
+          len(all_possible_probe_tumour_dict))
 
     print('start finding cover')
     # while len(covered_tumour_id) != len(all_unique_tumour_id):
-    # only until it cover 80%
-    while len(covered_tumour_id) < 26912 :
+    # only until it cover 90% (the default)
+    percentage_cover_threshold = len(recurrent_unique_tumour_id) * cumulative_contribution_threshold/100
+    probe_list = []
+    num_probe_percentage_cover_threshold = 0
+    while len(covered_tumour_id) < percentage_cover_threshold:
+
         # the tumour ids of the position that current has the most tumour ids
-        tumour_ids_position_current_most_tumour = recurrent_unique_tumour_set_list.pop(-1)
+        num_most_tumour = 0
+        probe_most_tumour = ''
+        for probe, tumour_set in all_possible_probe_tumour_dict.items():
+            if len(tumour_set) > num_most_tumour:
+                num_most_tumour = len(tumour_set)
+                probe_most_tumour = probe
+        tumour_set_selected_probe = all_possible_probe_tumour_dict[
+            probe_most_tumour]
+        all_possible_probe_tumour_dict.pop(probe_most_tumour, None)
 
-        # add the covered tumour ids, and keep only unique
-        covered_tumour_id.extend(tumour_ids_position_current_most_tumour)
+        # add the covered , and keep only unique
+
+        # add the newly covered tumour ids, and keep it unique
+        covered_tumour_id.extend(list(tumour_set_selected_probe))
         covered_tumour_id = list(set(covered_tumour_id))
-        cover_sizes.append(len(covered_tumour_id))
-        cover_sizes_percentage.append(len(covered_tumour_id)/33640)
-        print(len(covered_tumour_id)/33640)
+        # calculate new cumulative contribution
+        cumulative_contribution = len(covered_tumour_id) / len(recurrent_unique_tumour_id)
 
-        # for every other set, subtract tumour ids in current
-        # then add to new list
-        new_unique_tumour_set_list = []
-        for tumour_set in recurrent_unique_tumour_set_list:
-            new_tumour_set = tumour_set.difference(tumour_ids_position_current_most_tumour)
-            new_unique_tumour_set_list.append(new_tumour_set)
+        probe_list.append([probe_most_tumour, cumulative_contribution])
+        cover_sizes_percentage.append(cumulative_contribution)
+        print(cumulative_contribution)
 
-        # sort the new list, and reassign
-        new_unique_tumour_set_list.sort(key=len)
-        recurrent_unique_tumour_set_list = new_unique_tumour_set_list
 
-    print(len(cover_sizes_percentage) - 1, 'probes are required to achieve 80% coverage')
-    print(cover_sizes_percentage)
+        # TODO modify this to report other cover than 80%
+        # if len(covered_tumour_id) < eighty_percentage_cover:
+        #     num_probe_percentage_cover_threshold += 1
 
-    plt.plot(cover_sizes_percentage, linewidth=1)
+        # for every other set, subtract tumour ids in current, add to new list
+        for probe, tumour_set in all_possible_probe_tumour_dict.items():
+            all_possible_probe_tumour_dict[probe] = tumour_set.difference(
+                tumour_set_selected_probe)
+
+    type_probe_dict[cell_mutation_type] = [num_probe_percentage_cover_threshold,
+                                           probe_list]
+
+    plt.plot(cover_sizes_percentage, linewidth=1, label=cell_mutation_type)
     plt.ylabel('percentage of tumour covered')
-    plt.xlabel('number of bp selected')
-    plt.title('coverage of tumours from bp')
+    plt.xlabel('number of ' + targeting_window_size + 'bp probes selected')
+    plt.title('coverage of tumours with increasing probe ')
     plt.savefig('stop_at_90.pdf')
 
 
@@ -738,15 +898,15 @@ def construct_bp_individual_plot(gene_cell_mutation_type_info_dict):
     "optimal solution to begin with "
 
 
-
-    sys.exit()
-
-
-def get_mapping_position_tumour(all_tumour_id,
-                                gene_cell_mutation_type_info_dict,
-                                position_tumour, tumour_position):
+def get_mapping_position_tumour(all_tumour_id, gene_tumour_position,
+                                gene_cell_mutation_type_info_dict, indel_filter_threshold):
     for gene_cell_type, info in gene_cell_mutation_type_info_dict.items():
         # assert len(info['mutation genome position']) == len(info['id tumour'])
+
+        position_tumour = {}
+        tumour_position = {}
+        gene_tumour_position[gene_cell_type] = [position_tumour,
+                                                tumour_position]
         for i in range(len(info['mutation genome position'])):
             chromosome_position_range = info['mutation genome position'][i]
             tumour_id = info['id tumour'][i]
@@ -755,8 +915,8 @@ def get_mapping_position_tumour(all_tumour_id,
                 # all genomic position are in the format a:b-c
                 # where a is the chromosome number, followed by a semicolon
                 # b is the start of the range, followed by a dash
-                # c si the end of the range, followed by nothing
-                # a single base pair mutation is denoted as having the
+                # c is the end of the range, followed by nothing
+                # for single base pair mutation it is denoted as having the
                 # same start and end of the range
                 semicolon_index = chromosome_position_range.index(':')
                 dash_index = chromosome_position_range.index('-')
@@ -768,7 +928,7 @@ def get_mapping_position_tumour(all_tumour_id,
                                            int(position_range_end) + 1))
 
                 # remove mutation with greater than 30bp
-                if int(position_range_end) > int(position_range_start) + 30:
+                if int(position_range_end) > int(position_range_start) + indel_filter_threshold:
                     continue
 
                 chromosome = chromosome_position_range[:semicolon_index]
@@ -776,11 +936,203 @@ def get_mapping_position_tumour(all_tumour_id,
                     chromosome_position = chromosome + ':' + str(position)
                     position_tumour.setdefault(chromosome_position, []).append(
                         tumour_id)
-                    tumour_position.setdefault(tumour_id, []).append(chromosome_position)
+                    tumour_position.setdefault(tumour_id, []).append(
+                        chromosome_position)
 
                 all_tumour_id.append(tumour_id)
 
 
+def find_all_potential_probe_placement(gene_tumour_position,
+                                       all_possible_probe_tumour_dict,
+                                       recurrent_definition, targeting_window_size):
+    counter = 1
+    for gene_cell_type, position_tumour_dict_list in gene_tumour_position.items():
+
+        position_tumour = position_tumour_dict_list[0]
+
+        # make a list of all position with mutation, sorted to be use in the next section
+        all_position_list = []
+        for position, tumour in position_tumour.items():
+            all_position_list.append(position)
+        all_position_list.sort()
+
+        # make a list that denotes the number of unique tumour at all position
+        # with or without mutation
+        position_tumour_set_list = []
+        all_position_list_with_gap = []
+        position_num_tumour_list = []
+        make_position_info_list(all_position_list, all_position_list_with_gap,
+                                position_num_tumour_list, position_tumour,
+                                position_tumour_set_list)
+
+        index_of_mutation = []
+        for i in range(len(position_num_tumour_list)):
+            # only if the mutation is recurrent, add it in
+            if position_num_tumour_list[i] >= recurrent_definition:
+                index_of_mutation.append(i)
+
+        # calculate what tumour will be in each probe
+        # another list to signify the index where the mutation is
+        #   not empty, so that we only include probes that are within 80bp of
+        #   each side for every mutation
+        probe_tumour_set = []
+        make_each_probe(all_position_list_with_gap,
+                        all_possible_probe_tumour_dict, index_of_mutation,
+                        position_tumour_set_list, probe_tumour_set, targeting_window_size,
+                        recurrent_definition)
+
+        # the position in all_possible_probe_tumour_dict represent the
+        # start of a probe, unlike position_tumour dict
+
+        print('nth gene', counter, len(gene_tumour_position))
+        counter += 1
+
+
+def make_position_info_list(all_position_list, all_position_list_with_gap,
+                            position_num_tumour_list, position_tumour,
+                            position_tumour_set_list):
+    for i in range(len(all_position_list)):
+        last_position = all_position_list[i]
+        tumour_set = position_tumour[last_position]
+        position_tumour_set_list.append(tumour_set)
+
+        position_num_tumour_list.append(len(tumour_set))
+
+        all_position_list_with_gap.append(last_position)
+
+        if len(all_position_list) == 1:
+            break
+
+        # if we have reach the end of the end, do not add gaps, because there
+        # are not meant to be any
+        if i + 1 == len(all_position_list):
+            break
+
+        # if there is a gap of X, append X 0s
+        next_position = all_position_list[i + 1]
+        gap_length = find_gap_length(next_position, last_position)
+
+        gap_list = ['0' for _ in range(gap_length)]
+        position_gap_list = ['' for _ in range(gap_length)]
+        num_gap_list = [0] * gap_length
+
+        # a list of tumour set for each position, except where there is
+        # no tumour at that position, then it has a '0'
+        position_tumour_set_list.extend(gap_list)
+        all_position_list_with_gap.extend(position_gap_list)
+        position_num_tumour_list.extend(num_gap_list)
+
+
+def make_each_probe(all_position_list_with_gap, all_possible_probe_tumour_dict,
+                    index_of_mutation, position_tumour_set_list,
+                    probe_tumour_set, targeting_window_size, recurrent_definition):
+
+    # a unique list of list of mutation indices that is covered by each probe
+    # list_position_set = []
+    for current_position in range(len(position_tumour_set_list)):
+
+        # TODO the function below is the bottle neck (that it ran for so many times)
+        # this alone is 1105.556s out of 1653.824s (18.4 min out of 27min)
+        # the rest of make each probe is 221
+        # it was called 969 million times, but the rest of make each probe is called only 3m times
+        # we need pre-filter this to reduce bottleneck
+        # check if the current position is at most targeting_window_size before a mutation
+        between, index_of_first_mutation_covered = is_current_position_a_probe_length_before_mutation(
+            current_position, index_of_mutation, targeting_window_size)
+
+        # skip, if it is not zero and not between
+        if current_position != 0 and not between:
+            continue
+
+        # I think this was the rest of make each probe
+        # # go from the index of the first mutation index covered to the index of the last mutation that
+        # # can be covered (if there is one)
+        # # a list of mutation indices covered by this probe
+        # list_mutation_index_covered_probe = []
+        # end_of_probe = current_position + 80
+        # for k in range(index_of_first_mutation_covered, len(index_of_mutation)):
+        #     if index_of_mutation[k] > end_of_probe:
+        #         break
+        #     list_mutation_index_covered_probe.append(k)
+        #
+        # # if this potential probe covers each the same mutation indices as a previous probe, skip
+        # # making this probe
+        # if list_mutation_index_covered_probe in list_position_set:
+        #     continue
+        # else:
+        #     list_position_set.append(list_mutation_index_covered_probe)
+
+
+        # no, this does not matter, since this is just probe starting bp
+        # if the number of unique tumours at this position is 1 or 0
+        # if len(position_tumour_set_list[current_position]) < 2:
+        #     continue
+
+        # the starting base pair of this probe
+        probe_start_bp = all_position_list_with_gap[current_position]
+
+        all_tumour_probe = collect_probe_unique_tumours(current_position,
+                                                        position_tumour_set_list,
+                                                        targeting_window_size,
+                                                        recurrent_definition)
+
+        # TODO only need to extend them by the index with mutations
+        # i need everything from the last all_tumour_probe
+        # except the one from the first set
+
+        # first_tumour_set = set(probe_gene_section[i])
+        #
+        # only_in_first = set(all_tumour_probe) - first_tumour_set
+
+        all_possible_probe_tumour_dict[probe_start_bp] = all_tumour_probe
+        probe_tumour_set.append(all_tumour_probe)
+
+
+def is_current_position_a_probe_length_before_mutation(current_position, index_of_mutation, targeting_window_size):
+    between = False
+    index_of_first_mutation_covered = 0
+    for j in range(len(index_of_mutation)):
+        a_mutation_position = index_of_mutation[j]
+        if a_mutation_position - targeting_window_size <= current_position <= a_mutation_position:
+            between = True
+            index_of_first_mutation_covered = j
+            break
+    return between, index_of_first_mutation_covered
+
+
+def collect_probe_unique_tumours(current_position, position_tumour_set_list, targeting_window_size, recurrent_definition):
+    """
+    :param current_position: the starting position of this potential probe
+    :param position_tumour_set_list: a list of sets that have of tumours id of that position
+    :param targeting_window_size: the number of base pair our probe can target
+    :param recurrent_definition: the number of samples for a mutation to be considered a recurrent mutation
+    count the unique tumours that is covered by this potential probe
+    """
+
+    # the section of this gene that corresponds to this probe
+    probe_gene_section = position_tumour_set_list[
+                         current_position:(current_position + targeting_window_size)]
+    # all unique tumour covered by this probe
+    all_tumour_probe = []
+    for tumour_set in probe_gene_section:
+        if tumour_set == '0':
+            continue
+        if len(tumour_set) < recurrent_definition:
+            continue
+        all_tumour_probe.extend(tumour_set)
+    all_tumour_probe = set(all_tumour_probe)
+    return all_tumour_probe
+
+
+def find_gap_length(next_position, last_position):
+    next_position_list = next_position.split(':')
+    last_position_list = last_position.split(':')
+    next_position_wo_chromosome = next_position_list[1]
+    last_position_wo_chromosome = last_position_list[1]
+    return int(next_position_wo_chromosome) - int(
+        last_position_wo_chromosome) - 1
+
+
 if __name__ == "__main__":
     # mutation file, CNV file, and gene list file
-    rank_cosmic_rows(sys.argv[1], sys.argv[2], sys.argv[3], sys.argv[4])
+    main(sys.argv[1], sys.argv[2], sys.argv[3], sys.argv[4])
