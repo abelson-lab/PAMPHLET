@@ -1,5 +1,5 @@
 import matplotlib.pyplot as plt
-from typing import List, Dict, Tuple
+from typing import List, Dict, Tuple, Union
 
 from temp import write_output
 
@@ -55,16 +55,27 @@ def choose_probe_placement(
 def chose_most_recurrent_mutation_then_probe_centered_at_mutation_center(
         gene_info_dict: Dict[str, dict], cumulative_contribution_threshold: int,
         targeting_window_size: int,
-        indel_filter_threshold: int, recurrent_definition: int) -> list:
-    # TODO finish docstring
+        indel_filter_threshold: int, recurrent_definition: int) -> List[list]:
     """
-    This approach take
+    This approach choose the most recurrent mutation based on number of
+    tumour that has this mutation (the greater the number of tumour, the more
+    recurrent it is), and then these covered tumour are removed from every other
+    mutation's list, so that all other mutation can be ranked by the number of
+    tumours they have in addition to the ones already covered. Due to that, the already selected
+    mutation will have number of tumours of zero. Additionally, for each selected
+    mutation, it will attempt to see if any other mutation can be covered
+    by the targeting window whose center is the center of the selected mutation.
+    Repeat until total number of tumour covered by the selected mutation and
+    its targeting window exceeds the cumulative contribution threshold, which
+    is a percentage of the total number of unique recurrent tumours.
     :param gene_info_dict: A dictionary mapping gene to info
     :param cumulative_contribution_threshold: see user_chose_options
     :param targeting_window_size: see user_chose_options
     :param indel_filter_threshold: see user_chose_options
     :param recurrent_definition: see user_chose_options
-    :return:
+    :return: A list of probe, with two genomic location, indicating the
+    5' most mutation and the 3' most mutation of that probe, and the cumulative
+    contribution up to and including that probe.
     """
     all_tumour_id = []
     gene_tumour_position = {}
@@ -119,7 +130,7 @@ def chose_most_recurrent_mutation_then_probe_centered_at_mutation_center(
     plt.title('coverage of tumours with increasing probe ')
     plt.savefig('stop_at_90.pdf')
 
-    return [percentage_cover_threshold, mutation_list]
+    return [percentage_cover_threshold, mutation_list, cover_sizes_percentage]
 
 
 """1st level function"""
@@ -129,12 +140,12 @@ def chose_most_recurrent_mutation_then_probe_centered_at_mutation_center(
 def rank_all_probe_choose_most_recurrent(
         gene_info_dict: Dict[str, dict], cumulative_contribution_threshold: int,
         targeting_window_size: int,
-        indel_filter_threshold: int, recurrent_definition: int):
+        indel_filter_threshold: int, recurrent_definition: int) -> List[list]:
     """
     so this is actually a set cover problem, whose naive greedy algorithm produces" \
     "a solution with the upper bound of OPT log_e n where OPT is the optimal" \
     "solution and the n the total number of element (size of the universe)" \
-    "our unique n = 35566 , so about the optimal solution is at most 11 times smaller"
+    "our unique n = 35566 , so the optimal solution is at most 11 times smaller"
     "there is faster greedy algorithms, see wikipedia or CLRS"
     "the number of sets is 9915"
     "there is a 9:5073770 with 17333"
@@ -146,12 +157,23 @@ def rank_all_probe_choose_most_recurrent(
     "which has not changed, but the optimal solution has become smaller, how much smaller?" \
     "I don't know, not sure if it has to do with the fact that we dont know the" \
     "optimal solution to begin with "
-    :param gene_info_dict:
-    :param cumulative_contribution_threshold:
-    :param targeting_window_size:
-    :param indel_filter_threshold:
-    :param recurrent_definition:
-    :return:
+
+    To summarize, this approach generate all possible probe (with a user defined
+    targeting window), by start from the 5' most of every gene, and shifting one
+    base pair right each time (and each is a different possible probe), and then
+    each probe corresponds to a set of tumours that have mutation within the limit
+    of each probe. Finally, all probes are ranked by their number of tumour, and
+    the probe with the most amount of tumours are selected first, then those
+    tumours are removed from the set of every other probe. This is repeated until
+    the number of tumours covered exceeds the cumulative contribution threshold
+    :param gene_info_dict: A dictionary mapping gene to info
+    :param cumulative_contribution_threshold: see user_chose_options
+    :param targeting_window_size: see user_chose_options
+    :param indel_filter_threshold: see user_chose_options
+    :param recurrent_definition: see user_chose_options
+    :return: A list of probe, with two genomic location, indicating the
+    5' most mutation and the 3' most mutation of that probe, and the cumulative
+    contribution up to and including that probe.
     """
 
     all_tumour_id = []
@@ -195,19 +217,29 @@ def rank_all_probe_choose_most_recurrent(
     plt.title('coverage of tumours with increasing probe ')
     plt.savefig('stop_at_90.pdf')
 
-    return [percentage_cover_threshold, probe_list]
+    return [percentage_cover_threshold, probe_list, cover_sizes_percentage]
 
 
 def find_all_potential_probe_placement(
         gene_tumour_position: Dict[str, List[Dict]],
-        all_possible_probe_tumour_dict: Dict,
+        all_possible_probe_tumour_dict: Dict[str, Tuple[set, int, int]],
         recurrent_definition: int,
         targeting_window_size: int):
+    """
+    Generate all potential probe
+    :param gene_tumour_position: A dictionary consist of gene mapping to a list
+    of dictionaries, one of those dictionary maps position to tumour set, another
+    one is maps position range of deletion mutation to tumour set
+    :param all_possible_probe_tumour_dict: A dict to be populated of probes mapping
+    to tumour sets
+    :param recurrent_definition: see user_chose_options
+    :param targeting_window_size: see user_chose_options
+    """
     counter = 1
     for gene_cell_type, position_tumour_dict_list in gene_tumour_position.items():
 
         position_tumour = position_tumour_dict_list[0]
-        position_tumour_deletion = position_tumour_dict_list[2]
+        position_range_tumour_deletion = position_tumour_dict_list[2]
 
         # make a list of all position with mutation, sorted to be use in the next section
         all_position_list = []
@@ -221,11 +253,9 @@ def find_all_potential_probe_placement(
         all_position_list_with_gap = []
         position_num_tumour_list = []
         position_tumour_deletion_dict = {}
-        make_position_info_list(all_position_list, all_position_list_with_gap,
-                                position_num_tumour_list, position_tumour,
-                                position_tumour_set_list,
-                                position_tumour_deletion,
-                                position_tumour_deletion_dict)
+        make_position_info_list(position_tumour, position_range_tumour_deletion, all_position_list,
+                                all_position_list_with_gap, position_num_tumour_list,
+                                position_tumour_set_list, position_tumour_deletion_dict)
 
         index_of_mutation = []
         for i in range(len(position_num_tumour_list)):
@@ -242,7 +272,7 @@ def find_all_potential_probe_placement(
                         all_possible_probe_tumour_dict, index_of_mutation,
                         position_tumour_set_list, probe_tumour_set,
                         targeting_window_size, recurrent_definition,
-                        position_tumour_deletion, position_tumour_deletion_dict)
+                        position_range_tumour_deletion, position_tumour_deletion_dict)
 
         # the position in all_possible_probe_tumour_dict represent the
         # start of a probe, unlike position_tumour dict
@@ -254,21 +284,46 @@ def find_all_potential_probe_placement(
 """3rd level function"""
 
 
-def make_position_info_list(all_position_list, all_position_list_with_gap,
-                            position_num_tumour_list, position_tumour,
-                            position_tumour_set_list, position_tumour_deletion,
-                            position_tumour_deletion_dict):
+def make_position_info_list(position_tumour: Dict[str, List[str]], position_range_tumour_deletion: Dict[str, List[str]],
+                            all_position_list: List[str],
+                            all_position_list_with_gap: List[str],
+                            position_num_tumour_list: List[int],
+                            position_tumour_set_list: List[Union[List[str], str]],
+                            position_tumour_deletion_dict: Dict[str, str]):
+    """
+    go through the dictionaries and make lists that contain information on
+    the tumour sets of each mutation, the size of each tumour set, the actual
+    chromosome+position of each mutation. These three list are connected by
+    mutation positions, and the relative position of each mutation relative
+    to the leftmost position are embedding here through indices of each list,
+    meaning that for every base that does not have mutations, there is something
+    in the lists that represents those gaps.
+    :param position_tumour: A dict mapping mutation position to tumour set
+    :param position_range_tumour_deletion: A dict mapping deletion mutation's position
+     range to tumour set
+    :param position_tumour_deletion_dict: A dict mapping a position to a position range
+     for deletion mutations
+    :param all_position_list: A list of all mutated positions (chromosome position range)
+    :param all_position_list_with_gap: same as above except for every base between
+     that does not have any mutation, there is an empty string
+    :param position_num_tumour_list: A list of int representing the number of
+    tumour at that position.
+    :param position_tumour_set_list: A list of string or a list of list of str
+     representing the tumour at that position, if none, then just '0'
+    """
     # i want a dictionary of all position of any deletion to empty string
     # I need the covered base pairs of the deletion
-    for deletion_position, tumour_set in position_tumour_deletion.items():
+    # TODO maybe split this for loop into a different function
+    for deletion_position_range, tumour_set in position_range_tumour_deletion.items():
         position_list, position_range_end, position_range_start, semicolon_index = parse_chromosome_position_range(
-            deletion_position)
+            deletion_position_range)
         for position in position_list:
-            position_tumour_deletion_dict[position] = deletion_position
+            position_tumour_deletion_dict[position] = deletion_position_range
 
     for i in range(len(all_position_list)):
         last_position = all_position_list[i]
-        tumour_set = position_tumour[last_position]
+        tumour_set = list(set(position_tumour[last_position]))
+
         position_tumour_set_list.append(tumour_set)
 
         position_num_tumour_list.append(len(tumour_set))
@@ -294,14 +349,21 @@ def make_position_info_list(all_position_list, all_position_list_with_gap,
         # a list of tumour set for each position, except where there is
         # no tumour at that position, then it has a '0'
         position_tumour_set_list.extend(gap_list)
-        all_position_list_with_gap.extend(position_gap_list)
         position_num_tumour_list.extend(num_gap_list)
+        all_position_list_with_gap.extend(position_gap_list)
 
 
 """4th level function"""
 
 
-def find_gap_length(next_position, last_position):
+def find_gap_length(next_position: str, last_position: str) -> int:
+    """
+    find the number of bases between two mutations (not deletions), or
+    the gap length
+    :param next_position: One of the mutations
+    :param last_position: The other mutation
+    :return: A integer represent the gap length
+    """
     next_position_list = next_position.split(':')
     last_position_list = last_position.split(':')
     next_position_wo_chromosome = next_position_list[1]
@@ -313,22 +375,26 @@ def find_gap_length(next_position, last_position):
 """ 3rd level function"""
 
 
-def make_each_probe(all_position_list_with_gap, all_possible_probe_tumour_dict,
-                    index_of_mutation, position_tumour_set_list,
+def make_each_probe(all_position_list_with_gap: List[str], all_possible_probe_tumour_dict: Dict[str, Tuple[set, int, int]],
+                    indices_of_mutation: List[int], position_tumour_set_list: List[Union[List[str], str]],
                     probe_tumour_set, targeting_window_size,
-                    recurrent_definition, position_tumour_deletion,
+                    recurrent_definition, position_range_tumour_deletion,
                     position_tumour_deletion_dict):
     """
     for the bottleneck
     :param all_position_list_with_gap:
     :param all_possible_probe_tumour_dict:
-    :param index_of_mutation:
-    :param position_tumour_set_list:
-    :param probe_tumour_set:
-    :param targeting_window_size:
-    :param recurrent_definition:
-    :param position_tumour_deletion:
-    :param position_tumour_deletion_dict:
+    :param indices_of_mutation: A list of indices representing the position of
+     each mutation to the leftmost mutation
+    :param position_tumour_set_list: A list of string or a list of list of str
+     representing the tumour at that position, if none, then just '0'
+    :param probe_tumour_set: A list of sets of tumour that each probe covers
+    :param targeting_window_size: see user_chose_options
+    :param recurrent_definition: see user_chose_options
+    :param position_range_tumour_deletion: A dict mapping deletion mutation's position
+     range to tumour set
+    :param position_tumour_deletion_dict: A dict mapping a position to a position range
+     for deletion mutations
     :return:
     """
     # a unique list of list of mutation indices that is covered by each probe
@@ -342,7 +408,7 @@ def make_each_probe(all_position_list_with_gap, all_possible_probe_tumour_dict,
         # we need pre-filter this to reduce bottleneck
         # check if the current position is at most targeting_window_size before a mutation
         between, index_of_first_mutation_covered = is_current_position_a_probe_length_before_mutation(
-            current_position, index_of_mutation, targeting_window_size)
+            current_position, indices_of_mutation, targeting_window_size)
 
         # skip, if it is not zero and not between
         if current_position != 0 and not between:
@@ -354,8 +420,8 @@ def make_each_probe(all_position_list_with_gap, all_possible_probe_tumour_dict,
         # # a list of mutation indices covered by this probe
         # list_mutation_index_covered_probe = []
         # end_of_probe = current_position + 80
-        # for k in range(index_of_first_mutation_covered, len(index_of_mutation)):
-        #     if index_of_mutation[k] > end_of_probe:
+        # for k in range(index_of_first_mutation_covered, len(indices_of_mutation)):
+        #     if indices_of_mutation[k] > end_of_probe:
         #         break
         #     list_mutation_index_covered_probe.append(k)
         #
@@ -379,7 +445,7 @@ def make_each_probe(all_position_list_with_gap, all_possible_probe_tumour_dict,
                                            position_tumour_set_list,
                                            targeting_window_size,
                                            recurrent_definition,
-                                           position_tumour_deletion,
+                                           position_range_tumour_deletion,
                                            position_tumour_deletion_dict,
                                            probe_start_bp)
 
@@ -401,12 +467,12 @@ def make_each_probe(all_position_list_with_gap, all_possible_probe_tumour_dict,
 
 
 def is_current_position_a_probe_length_before_mutation(current_position,
-                                                       index_of_mutation,
+                                                       indices_of_mutation: List[int],
                                                        targeting_window_size):
     between = False
     index_of_first_mutation_covered = 0
-    for j in range(len(index_of_mutation)):
-        a_mutation_position = index_of_mutation[j]
+    for j in range(len(indices_of_mutation)):
+        a_mutation_position = indices_of_mutation[j]
         if a_mutation_position - targeting_window_size <= current_position <= a_mutation_position:
             between = True
             index_of_first_mutation_covered = j
