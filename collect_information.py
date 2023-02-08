@@ -151,8 +151,7 @@ def read_selected_genes(gene_list_file_name):
     return l_chip_gene_set_1
 
 
-def define_important_columns() -> Tuple[
-    List[str], List[str], List[int], List[int]]:
+def define_important_columns() -> Tuple[List[str], List[str], List[int], List[int]]:
     """
     Cosmic mutation files are organized as a table, so when reading them,
     which columns are to be read needs to be known beforehand, since the columns
@@ -201,8 +200,7 @@ def read_process_file_point_mutation(cosmic_mutation_file_name: str,
     print('tumour distribution for each point mutation cell type ',
           cell_type_num_tumour_dict)
     # and store in gene_info_dict
-    calculate_mutation_frequency(cell_type_num_tumour_dict,
-                                 gene_mutation_type_info_dict)
+    calculate_mutation_frequency(gene_mutation_type_info_dict)
 
 
 """3rd level function"""
@@ -255,11 +253,11 @@ def read_mutation_file(cosmic_mutation_file_name: str,
                 if remove_intronic_mutation:
                     filter_out_flag = filter_intronic_mutations(row[19])
                 if filter_out_flag or row[12] == 'NS' or row[
-                    21] == 'Substitution - coding silent':
+                        21] == 'Substitution - coding silent':
                     continue
 
                 # if we need to only target t-cell
-                # user would input when asked, what histology subtype 1 do you want
+                # user would input when asked what histology subtype 1 do you want
                 #   dict_key_name should just be
                 dict_key_name = gene_name + ';' + 'point'
 
@@ -284,7 +282,6 @@ def filter_intronic_mutations(mutation_CDS) -> bool:
     # ending or start in an exon, and both start and end in two different introns,
     # then skip it (set filter out flag is true)
     :param mutation_CDS: The variant notation, follows HGVS nomenclature
-    :param row: I did not give a typing hint, since
     :return:
     """
     # assert 'c.' in mutation_CDS
@@ -381,7 +378,7 @@ def check_variant_type(mutation_cds: str):
                           mutation_cds) is None \
             and re.search(
         "c\\.(\\()?[0-9]+[+\\-]\\?(_[0-9]+[+\\-]\\?)?(\\))?[ACGTdi>?]",
-        mutation_cds) is None:
+            mutation_cds) is None:
         print(mutation_cds)
 
 
@@ -530,7 +527,6 @@ def read_CNV_file(cosmic_CNV_file_name,
                         or 'post_transplant_lymphoproliferative_disorder' in histology \
                         or 'mycosis_fungoides-Sezary_syndrome' in histology:
                     dict_key_name = gene_name + ';' + 'T_cell' + ';' + 'CNV'
-                    cell_type = 'T_cell'
                 elif 'B_cell' in histology or 'Burkitt' in histology or 'chronic' in histology \
                         or 'follicular_lymphoma' in histology or 'hairy' in histology \
                         or 'hodgkin' in histology or 'lymphoplasmacytic_lymphoma' in histology \
@@ -538,10 +534,8 @@ def read_CNV_file(cosmic_CNV_file_name,
                         or 'plasma_cell_myeloma' in histology or 'plasmacytoma' in histology \
                         or 'effusion' in histology or 'MALT' in histology:
                     dict_key_name = gene_name + ';' + 'B_cell' + ';' + 'CNV'
-                    cell_type = 'B_cell'
                 else:
                     dict_key_name = gene_name + ';' + 'Other' + ';' + 'CNV'
-                    cell_type = 'Other'
 
                 specific_gene_histology_dict_CNV = gene_cell_mutation_type_dict_CNV.setdefault(
                     dict_key_name, {})
