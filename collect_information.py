@@ -3,45 +3,68 @@ import re
 from typing import List, Dict, Tuple
 
 
-def user_chose_options() -> Tuple[bool, int, int, int, int]:
+def user_chose_options() -> Tuple[bool, int, int, int, int, bool]:
     """
     Ask the user to choose their options, from do they want to remove intronic mutation,
     what is their definition of recurrent mutation, targeting window size,
-    indel filter threshold, and cumulative contribution threshold
+    indel filter threshold, cumulative contribution threshold, and merging
     :return: These fives choices
     """
 
-    remove_intronic_mutation = input(
-        "Do you want include intronic mutations, default is no")
+    remove_intronic_mutation = get_bool(
+        "Do you want remove intronic mutations, enter yes if you want to, default is yes ")
     recurrent_definition = input("How do you define recurrent mutation,"
                                  " default is a mutation is only consider"
                                  " recurrent if it appear in more than 2"
-                                 " tumours, including 2 tumours")
+                                 " tumours, including 2 tumours ")
     targeting_window_size = input("What is your window size, or the number"
                                   " of base pairs that can be effectively"
-                                  " targeted, default is 80bp")
+                                  " targeted, default is 80bp ")
     indel_filter_threshold = input("What size of indel is too big to be cover"
                                    " by your window size, default is 30bp or"
-                                   "greater will be filtered out")
+                                   "greater will be filtered out ")
     cumulative_contribution_threshold = input("what is the coverage of all"
                                               " recurrent tumours you want for"
                                               " the probes, default is reporting"
                                               " until it covers 80% of the"
-                                              " probes")
+                                              " probes ")
+    merge_other = get_bool(
+        "Do you want to merge other mutation within the targeting window"
+        "or do you want to have one probe target only one mutation,"
+        "enter yes if you want to, default is yes ")
+
     if remove_intronic_mutation == "yes":
         remove_intronic_mutation = True
     else:
         remove_intronic_mutation = False
+
+    if merge_other == "yes":
+        merge_other = True
+    else:
+        merge_other = False
 
     recurrent_definition = int(recurrent_definition)
     targeting_window_size = int(targeting_window_size)
     indel_filter_threshold = int(indel_filter_threshold)
     cumulative_contribution_threshold = int(cumulative_contribution_threshold)
 
-    return remove_intronic_mutation, recurrent_definition, targeting_window_size, indel_filter_threshold, cumulative_contribution_threshold
+    return remove_intronic_mutation, recurrent_definition, targeting_window_size, indel_filter_threshold, cumulative_contribution_threshold, merge_other
 
 
-def read_file_choose_cancer(cosmic_mutation_file_name: str, use_default: bool) -> List[List[str]]:
+"""second level function"""
+
+
+def get_bool(prompt: str) -> bool:
+    """a simple helper function to force the user to enter Yes or No"""
+    while True:
+        try:
+            return {"Yes": True, "No": False}[input(prompt).lower()]
+        except KeyError:
+            print("Invalid input please enter Yes or No")
+
+
+def read_file_choose_cancer(cosmic_mutation_file_name: str,
+                            use_default: bool) -> List[List[str]]:
     """
     Reads the cosmic file, then ask the user to choose the primary tissue,
     the primary histology, and the histology subtype one they want to target
@@ -70,7 +93,8 @@ def read_file_choose_cancer(cosmic_mutation_file_name: str, use_default: bool) -
 
         chosen_primary_tissue_set = list(set(all_primary_tissue_set))
         chosen_primary_histology_set = list(set(all_primary_histology_set))
-        chosen_histology_subtype_one_set = list(set(all_histology_subtype_one_set))
+        chosen_histology_subtype_one_set = list(
+            set(all_histology_subtype_one_set))
 
         chosen_sets = [chosen_primary_tissue_set, chosen_primary_histology_set,
                        chosen_histology_subtype_one_set]
@@ -98,7 +122,7 @@ def read_file_choose_cancer(cosmic_mutation_file_name: str, use_default: bool) -
     with open(cosmic_mutation_file_name) as mutation_file:
         csv_reader = csv.reader(mutation_file, delimiter=',')
         for row in csv_reader:
-            if row[7] in chosen_primary_tissue_set\
+            if row[7] in chosen_primary_tissue_set \
                     and row[11] not in all_primary_histology_set:
                 all_primary_histology_set[row[11]] = ""
 
@@ -115,7 +139,7 @@ def read_file_choose_cancer(cosmic_mutation_file_name: str, use_default: bool) -
         csv_reader = csv.reader(mutation_file, delimiter=',')
         for row in csv_reader:
             if row[7] in chosen_primary_tissue_set \
-                    and row[11] in chosen_primary_histology_set\
+                    and row[11] in chosen_primary_histology_set \
                     and row[12] not in all_histology_subtype_one_set:
                 all_histology_subtype_one_set[row[12]] = ""
 
@@ -190,7 +214,8 @@ def read_selected_genes(gene_list_file_name):
 
 
 # TODO I can remove this, sort of, each columns is named actually,
-def define_important_columns() -> Tuple[List[str], List[str], List[int], List[int]]:
+def define_important_columns() -> Tuple[
+    List[str], List[str], List[int], List[int]]:
     """
     Cosmic mutation files are organized as a table, so when reading them,
     which columns are to be read needs to be known beforehand, since the columns
@@ -294,7 +319,7 @@ def read_mutation_file(cosmic_mutation_file_name: str,
                 if remove_intronic_mutation:
                     filter_out_flag = filter_intronic_mutations(row[19])
                 if filter_out_flag or row[12] == 'NS' or row[
-                        21] == 'Substitution - coding silent':
+                    21] == 'Substitution - coding silent':
                     continue
 
                 # if we need to only target t-cell
@@ -419,7 +444,7 @@ def check_variant_type(mutation_cds: str):
                           mutation_cds) is None \
             and re.search(
         "c\\.(\\()?[0-9]+[+\\-]\\?(_[0-9]+[+\\-]\\?)?(\\))?[ACGTdi>?]",
-            mutation_cds) is None:
+        mutation_cds) is None:
         print(mutation_cds)
 
 
