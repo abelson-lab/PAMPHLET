@@ -15,10 +15,22 @@ from temp import \
 
 
 def main(cosmic_mutation_file_name: str, cosmic_CNV_file_name: str,
-         gene_list_file_name: str, healthy_mutation_file_name: str):
-    remove_intronic_mutation, recurrent_definition, targeting_window_size, indel_filter_threshold, cumulative_contribution_threshold = user_chose_options()
+         gene_list_file_name: str, healthy_mutation_file_name: str, use_default: str):
 
-    chosen_set = read_file_choose_cancer(cosmic_mutation_file_name)
+    remove_intronic_mutation = True
+    recurrent_definition = 2
+    targeting_window_size = 80
+    indel_filter_threshold = 30
+    cumulative_contribution_threshold = 90
+    if use_default == 'default':
+        print("using default")
+        use_default = True
+    else:
+        remove_intronic_mutation, recurrent_definition, targeting_window_size, indel_filter_threshold, cumulative_contribution_threshold = user_chose_options()
+
+
+
+    chosen_set = read_file_choose_cancer(cosmic_mutation_file_name, use_default)
 
     # TODO this is where you add more genes, from other papers
     l_chip_gene_set_1 = read_selected_genes(gene_list_file_name)
@@ -29,9 +41,8 @@ def main(cosmic_mutation_file_name: str, cosmic_CNV_file_name: str,
     read_process_file_point_mutation(cosmic_mutation_file_name,
                                      gene_cell_mutation_type_info_dict,
                                      important_column_heading_list,
-                                     important_column_number_list,
-                                     remove_intronic_mutation,
-                                     chosen_set)
+                                     important_column_number_list, chosen_set,
+                                     remove_intronic_mutation)
 
     choose_probe_placement(
         gene_cell_mutation_type_info_dict,
@@ -85,4 +96,4 @@ def main(cosmic_mutation_file_name: str, cosmic_CNV_file_name: str,
 
 if __name__ == "__main__":
     # mutation file, CNV file, and gene list file
-    main(sys.argv[1], sys.argv[2], sys.argv[3], sys.argv[4])
+    main(sys.argv[1], sys.argv[2], sys.argv[3], sys.argv[4], sys.argv[5])

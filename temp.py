@@ -1,8 +1,5 @@
-import csv
-import re
 import pandas as pd
 
-from typing import List, Dict
 
 
 def find_num_gene_only_CNV(gene_cell_mutation_type_info_dict,
@@ -109,14 +106,12 @@ def convert_dict_list(gene_cell_type_dict,
     for gene_cell_type, info in gene_cell_type_dict.items():
         gene_cell_type_list = gene_cell_type.split(';')
         gene = gene_cell_type_list[0]
-        cell_type = gene_cell_type_list[1]
-        mutation_type = gene_cell_type_list[2]
+        mutation_type = gene_cell_type_list[1]
 
         specific_gene_dict = gene_dict.setdefault(gene, {})
-        specific_gene_dict[cell_type + ' ' + mutation_type] = info
+        specific_gene_dict[mutation_type] = info
 
-    type_cell_mutation_list = ['T_cell point', 'T_cell CNV', 'B_cell point',
-                               'B_cell CNV', 'Other point', 'Other CNV']
+    type_cell_mutation_list = ['point', 'CNV',]
     for gene, cell_type_info_dict in gene_dict.items():
         l_chip_sublist = [gene]
         # each cell_type_info is a dict
@@ -252,6 +247,3 @@ def separate_gene_cell_mutation_type_info_dict(cell_mutation_type_dict,
         mutation_type = gene_cell_mutation_type_list[2]
         cell_mutation_type = cell_type + ';' + mutation_type
         cell_mutation_type_dict[cell_mutation_type][gene] = info
-
-
-

@@ -41,25 +41,51 @@ def user_chose_options() -> Tuple[bool, int, int, int, int]:
     return remove_intronic_mutation, recurrent_definition, targeting_window_size, indel_filter_threshold, cumulative_contribution_threshold
 
 
-def read_file_choose_cancer(cosmic_mutation_file_name: str) -> List[List[str]]:
+def read_file_choose_cancer(cosmic_mutation_file_name: str, use_default: bool) -> List[List[str]]:
     """
     Reads the cosmic file, then ask the user to choose the primary tissue,
     the primary histology, and the histology subtype one they want to target
     :param cosmic_mutation_file_name: The file name of the cosmic mutation file,
     it is under COSMIC Mutation on the cosmic website
+    :param use_default: chose t-cell cancers
     :return: A list of cancers that the user have chosen
     """
-    all_primary_tissue_set = []
-    all_primary_histology_set = []
-    all_histology_subtype_one_set = []
+    all_primary_tissue_set = {}
+    all_primary_histology_set = {}
+    all_histology_subtype_one_set = {}
+
+    print("searching the file to choose cancer")
+    if use_default:
+        with open(cosmic_mutation_file_name) as mutation_file:
+            csv_reader = csv.reader(mutation_file, delimiter=',')
+            for row in csv_reader:
+                histology = row[12]
+                if 'T_cell' in histology or 'anaplastic' in histology \
+                        or 'lymphomatoid_papulosis' in histology \
+                        or 'post_transplant_lymphoproliferative_disorder' in histology \
+                        or 'mycosis_fungoides-Sezary_syndrome' in histology:
+                    all_histology_subtype_one_set[histology] = ""
+        all_primary_tissue_set["haematopoietic_and_lymphoid_tissue"] = ""
+        all_primary_histology_set["lymphoid_neoplasm"] = ""
+
+        chosen_primary_tissue_set = list(set(all_primary_tissue_set))
+        chosen_primary_histology_set = list(set(all_primary_histology_set))
+        chosen_histology_subtype_one_set = list(set(all_histology_subtype_one_set))
+
+        chosen_sets = [chosen_primary_tissue_set, chosen_primary_histology_set,
+                       chosen_histology_subtype_one_set]
+        return chosen_sets
 
     # TODO refactor since these 3 have overlap
+    # TODO refactor, how can I skip first row
 
+    print("searching all primary tissue")
     with open(cosmic_mutation_file_name) as mutation_file:
         csv_reader = csv.reader(mutation_file, delimiter=',')
 
         for row in csv_reader:
-            all_primary_tissue_set = row[7]
+            if row[7] not in all_primary_tissue_set:
+                all_primary_tissue_set[row[7]] = ""
 
     all_primary_tissue_set = list(set(all_primary_tissue_set))
     print_set_as_numbered_list(all_primary_tissue_set)
@@ -68,11 +94,13 @@ def read_file_choose_cancer(cosmic_mutation_file_name: str) -> List[List[str]]:
     report_element_at_indices(all_primary_tissue_set, cancer_list_indices_list,
                               chosen_primary_tissue_set)
 
+    print("searching all primary histology")
     with open(cosmic_mutation_file_name) as mutation_file:
         csv_reader = csv.reader(mutation_file, delimiter=',')
         for row in csv_reader:
-            if row[7] in chosen_primary_tissue_set:
-                all_primary_histology_set.append(row[11])
+            if row[7] in chosen_primary_tissue_set\
+                    and row[11] not in all_primary_histology_set:
+                all_primary_histology_set[row[11]] = ""
 
     all_primary_histology_set = list(set(all_primary_histology_set))
     print_set_as_numbered_list(all_primary_histology_set)
@@ -82,12 +110,14 @@ def read_file_choose_cancer(cosmic_mutation_file_name: str) -> List[List[str]]:
                               cancer_list_indices_list,
                               chosen_primary_histology_set)
 
+    print("searching all primary histology")
     with open(cosmic_mutation_file_name) as mutation_file:
         csv_reader = csv.reader(mutation_file, delimiter=',')
         for row in csv_reader:
             if row[7] in chosen_primary_tissue_set \
-                    and row[11] in chosen_primary_histology_set:
-                all_histology_subtype_one_set.append(row[12])
+                    and row[11] in chosen_primary_histology_set\
+                    and row[12] not in all_histology_subtype_one_set:
+                all_histology_subtype_one_set[row[12]] = ""
 
     all_histology_subtype_one_set = list(set(all_histology_subtype_one_set))
     print_set_as_numbered_list(all_histology_subtype_one_set)
@@ -115,25 +145,33 @@ def print_set_as_numbered_list(a_list: List[str]):
 """3rd level function"""
 
 
-def read_number_as_list_indices() -> List[str]:
+def read_number_as_list_indices() -> List[int]:
     cancer_list_indices = input(
         "choose primary tissue/primary histology/histology subtype 1"
-        " you want to target from the list below, "
-        "separate by comma")
+        " you want to target from the list above, "
+        "separate by comma (type in a number) ")
 
     cancer_list_indices_list = cancer_list_indices.split(',')
 
-    return cancer_list_indices_list
+    cancer_list_indices_list_int = []
+    for index in cancer_list_indices_list:
+        cancer_list_indices_list_int.append(int(index))
+
+    for i in range(len(cancer_list_indices_list_int)):
+        cancer_list_indices_list_int[i] -= 1
+
+    return cancer_list_indices_list_int
 
 
 """3rd level function"""
 
 
 def report_element_at_indices(cancer_list: List[str],
-                              cancer_list_indices_list: List[str],
+                              cancer_list_indices_list: List[int],
                               chosen_cancer_list: List[str]):
     for indices in cancer_list_indices_list:
-        chosen_cancer_list.append(cancer_list[int(indices)])
+        chosen_cancer_list.append(cancer_list[indices])
+    print(chosen_cancer_list)
 
 
 def read_selected_genes(gene_list_file_name):
@@ -151,6 +189,7 @@ def read_selected_genes(gene_list_file_name):
     return l_chip_gene_set_1
 
 
+# TODO I can remove this, sort of, each columns is named actually,
 def define_important_columns() -> Tuple[List[str], List[str], List[int], List[int]]:
     """
     Cosmic mutation files are organized as a table, so when reading them,
@@ -178,8 +217,8 @@ def read_process_file_point_mutation(cosmic_mutation_file_name: str,
                                          str, dict],
                                      important_column_heading_list: List[str],
                                      important_column_number_list: List[int],
-                                     remove_intronic_mutation: bool,
-                                     chosen_set: List[List[str]]):
+                                     chosen_set: List[List[str]],
+                                     remove_intronic_mutation: bool = True):
     """
     Read the mutation file, then calculate the frequency
     :param cosmic_mutation_file_name: The file name of the cosmic mutation file
@@ -189,16 +228,12 @@ def read_process_file_point_mutation(cosmic_mutation_file_name: str,
     :param remove_intronic_mutation: Whether the user choose to remove intronic mutations
     :param chosen_set: The group of cancers that the user choose to target
     """
-    cell_type_num_tumour_dict = {}
     read_mutation_file(cosmic_mutation_file_name,
                        important_column_heading_list,
                        important_column_number_list,
                        gene_mutation_type_info_dict,
                        remove_intronic_mutation,
                        chosen_set)
-    print('gene cell-type pair non-CNV', len(gene_mutation_type_info_dict))
-    print('tumour distribution for each point mutation cell type ',
-          cell_type_num_tumour_dict)
     # and store in gene_info_dict
     calculate_mutation_frequency(gene_mutation_type_info_dict)
 
@@ -228,14 +263,20 @@ def read_mutation_file(cosmic_mutation_file_name: str,
     chosen_primary_histology_set = chosen_set[1]
     chosen_histology_subtype_one_set = chosen_set[2]
 
+    print(chosen_primary_tissue_set)
+    print(chosen_primary_histology_set)
+    print(chosen_histology_subtype_one_set)
+
     with open(cosmic_mutation_file_name) as mutation_file:
         csv_reader = csv.reader(mutation_file, delimiter=',')
 
-        Count_tumour_mutation_before_intronic(chosen_histology_subtype_one_set,
+        count_tumour_mutation_before_intronic(chosen_histology_subtype_one_set,
                                               chosen_primary_histology_set,
                                               chosen_primary_tissue_set,
                                               csv_reader)
 
+    with open(cosmic_mutation_file_name) as mutation_file:
+        csv_reader = csv.reader(mutation_file, delimiter=',')
         for row in csv_reader:
             # 0, 4, 6, 11, 12, 13, 14.  19, 21, 24, 25, 30
             # gene name, sample name, tumour id, primary site primary histology and its subtypes (3),
@@ -297,7 +338,7 @@ def filter_intronic_mutations(mutation_CDS) -> bool:
     return filter_out_flag
 
 
-def Count_tumour_mutation_before_intronic(chosen_histology_subtype_one_set,
+def count_tumour_mutation_before_intronic(chosen_histology_subtype_one_set,
                                           chosen_primary_histology_set,
                                           chosen_primary_tissue_set,
                                           csv_reader):
@@ -326,7 +367,7 @@ def Count_tumour_mutation_before_intronic(chosen_histology_subtype_one_set,
         list(unique_mutation_before_intronic_mutation))
     print('total number of mutations before intronic filter',
           len(unique_mutation_before_intronic_mutation))
-    print('total number of tumours with mutations before intronic filter',
+    print('total number of tumours before intronic filter',
           len(unique_tumour_before_intronic_mutation))
 
 
@@ -385,7 +426,7 @@ def check_variant_type(mutation_cds: str):
 def calculate_mutation_frequency(gene_mutation_type_info_dict):
     all_tumour = []
     for gene_mutation_type, info in gene_mutation_type_info_dict.items():
-        all_tumour.append(info['id tumour'])
+        all_tumour.extend(info['id tumour'])
     all_unique_tumour = len(list(set(all_tumour)))
 
     # calculate mutation frequency
@@ -499,9 +540,8 @@ def read_process_file_CNV_mutation(cosmic_CNV_file_name,
                   important_column_number_list_CNV)
     print('gene cell-type pair CNV', len(gene_cell_mutation_type_info_dict_CNV))
     print('CNV cell type distribution', cell_type_num_tumor_dict_CNV)
-    # and store in gene_cell_mutation_type_info_dict_CNV
-    calculate_CNV_frequency(cell_type_num_tumor_dict_CNV,
-                            gene_cell_mutation_type_info_dict_CNV)
+    # and store in gene_mutation_type_info_dict_CNV
+    calculate_CNV_frequency(gene_cell_mutation_type_info_dict_CNV)
 
 
 def read_CNV_file(cosmic_CNV_file_name,
@@ -550,23 +590,24 @@ def read_CNV_file(cosmic_CNV_file_name,
             # print(str(counter*100/650643) + '%')
 
 
-def calculate_CNV_frequency(cell_type_num_tumour_dict_CNV,
-                            gene_cell_mutation_type_info_dict_CNV):
-    # calculate CNV frequency
-    for gene_cell_mutation_type, info in gene_cell_mutation_type_info_dict_CNV.items():
-        genn_cell_mutation_type_list = gene_cell_mutation_type.split(';')
-        cell_type = genn_cell_mutation_type_list[1]
+def calculate_CNV_frequency(gene_mutation_type_info_dict_CNV):
+    all_tumour = []
+    for gene_mutation_type_CNV, info_CNV in gene_mutation_type_info_dict_CNV.items():
+        all_tumour.extend(info_CNV['id tumour'])
+    all_unique_tumour = len(list(set(all_tumour)))
+
+    # calculate mutation frequency
+    for gene_mutation_type, info in gene_mutation_type_info_dict_CNV.items():
 
         # number of sample this gene is found to have a mutation
         # multiply by 100 to turn into percentage
-        num_tumour_gene_cell_type = len(set(info['id tumour'])) * 100
+        num_tumour_gene = len(set(info['id tumour'])) * 100
         # total number of mutant sample for this histology subtype 1
-        num_tumour_total_cell_type = \
-            cell_type_num_tumour_dict_CNV[cell_type]
+        num_tumour_total = all_unique_tumour
 
         # this sort of calculates what percentage of people who have this
         # type of cancer has this gene are mutant
-        frequency_percentage = num_tumour_gene_cell_type / num_tumour_total_cell_type
+        frequency_percentage = num_tumour_gene / num_tumour_total
         info['frequency percentage'] = frequency_percentage
         info['num_tumour_gene_cell_type'] = len(set(info['id tumour']))
-        info['num_tumour_total_cell_type'] = num_tumour_total_cell_type
+        info['num_tumour_total_cell_type'] = num_tumour_total
