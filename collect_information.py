@@ -22,16 +22,16 @@ def user_chose_options() -> Tuple[bool, int, int, int, int, bool]:
                                   " targeted, default is 80bp ")
     indel_filter_threshold = input("What size of indel is too big to be cover"
                                    " by your window size, default is 30bp or"
-                                   "greater will be filtered out ")
+                                   " greater will be filtered out ")
     cumulative_contribution_threshold = input("what is the coverage of all"
                                               " recurrent tumours you want for"
                                               " the probes, default is reporting"
-                                              " until it covers 80% of the"
-                                              " probes ")
+                                              " until it covers 90% of the"
+                                              " tumour ")
     merge_other = get_bool(
         "Do you want to merge other mutation within the targeting window"
-        "or do you want to have one probe target only one mutation,"
-        "enter yes if you want to, default is yes ")
+        " or do you want to have one probe target only one mutation,"
+        " enter yes if you want to, default is yes ")
 
     if remove_intronic_mutation == "yes":
         remove_intronic_mutation = True
@@ -58,7 +58,7 @@ def get_bool(prompt: str) -> bool:
     """a simple helper function to force the user to enter Yes or No"""
     while True:
         try:
-            return {"Yes": True, "No": False}[input(prompt).lower()]
+            return {"yes": True, "no": False}[input(prompt).lower()]
         except KeyError:
             print("Invalid input please enter Yes or No")
 
@@ -99,61 +99,61 @@ def read_file_choose_cancer(cosmic_mutation_file_name: str,
         chosen_sets = [chosen_primary_tissue_set, chosen_primary_histology_set,
                        chosen_histology_subtype_one_set]
         return chosen_sets
+    else:
+        # TODO refactor since these 3 have overlap
+        # TODO refactor, how can I skip first row
 
-    # TODO refactor since these 3 have overlap
-    # TODO refactor, how can I skip first row
+        print("searching all primary tissue")
+        with open(cosmic_mutation_file_name) as mutation_file:
+            csv_reader = csv.reader(mutation_file, delimiter=',')
 
-    print("searching all primary tissue")
-    with open(cosmic_mutation_file_name) as mutation_file:
-        csv_reader = csv.reader(mutation_file, delimiter=',')
+            for row in csv_reader:
+                if row[7] not in all_primary_tissue_set:
+                    all_primary_tissue_set[row[7]] = ""
 
-        for row in csv_reader:
-            if row[7] not in all_primary_tissue_set:
-                all_primary_tissue_set[row[7]] = ""
+        all_primary_tissue_set = list(set(all_primary_tissue_set))
+        print_set_as_numbered_list(all_primary_tissue_set)
+        cancer_list_indices_list = read_number_as_list_indices()
+        chosen_primary_tissue_set = []
+        report_element_at_indices(all_primary_tissue_set, cancer_list_indices_list,
+                                  chosen_primary_tissue_set)
 
-    all_primary_tissue_set = list(set(all_primary_tissue_set))
-    print_set_as_numbered_list(all_primary_tissue_set)
-    cancer_list_indices_list = read_number_as_list_indices()
-    chosen_primary_tissue_set = []
-    report_element_at_indices(all_primary_tissue_set, cancer_list_indices_list,
-                              chosen_primary_tissue_set)
+        print("searching all primary histology")
+        with open(cosmic_mutation_file_name) as mutation_file:
+            csv_reader = csv.reader(mutation_file, delimiter=',')
+            for row in csv_reader:
+                if row[7] in chosen_primary_tissue_set \
+                        and row[11] not in all_primary_histology_set:
+                    all_primary_histology_set[row[11]] = ""
 
-    print("searching all primary histology")
-    with open(cosmic_mutation_file_name) as mutation_file:
-        csv_reader = csv.reader(mutation_file, delimiter=',')
-        for row in csv_reader:
-            if row[7] in chosen_primary_tissue_set \
-                    and row[11] not in all_primary_histology_set:
-                all_primary_histology_set[row[11]] = ""
+        all_primary_histology_set = list(set(all_primary_histology_set))
+        print_set_as_numbered_list(all_primary_histology_set)
+        cancer_list_indices_list = read_number_as_list_indices()
+        chosen_primary_histology_set = []
+        report_element_at_indices(all_primary_histology_set,
+                                  cancer_list_indices_list,
+                                  chosen_primary_histology_set)
 
-    all_primary_histology_set = list(set(all_primary_histology_set))
-    print_set_as_numbered_list(all_primary_histology_set)
-    cancer_list_indices_list = read_number_as_list_indices()
-    chosen_primary_histology_set = []
-    report_element_at_indices(all_primary_histology_set,
-                              cancer_list_indices_list,
-                              chosen_primary_histology_set)
+        print("searching all histology subtype 1")
+        with open(cosmic_mutation_file_name) as mutation_file:
+            csv_reader = csv.reader(mutation_file, delimiter=',')
+            for row in csv_reader:
+                if row[7] in chosen_primary_tissue_set \
+                        and row[11] in chosen_primary_histology_set \
+                        and row[12] not in all_histology_subtype_one_set:
+                    all_histology_subtype_one_set[row[12]] = ""
 
-    print("searching all primary histology")
-    with open(cosmic_mutation_file_name) as mutation_file:
-        csv_reader = csv.reader(mutation_file, delimiter=',')
-        for row in csv_reader:
-            if row[7] in chosen_primary_tissue_set \
-                    and row[11] in chosen_primary_histology_set \
-                    and row[12] not in all_histology_subtype_one_set:
-                all_histology_subtype_one_set[row[12]] = ""
+        all_histology_subtype_one_set = list(set(all_histology_subtype_one_set))
+        print_set_as_numbered_list(all_histology_subtype_one_set)
+        cancer_list_indices_list = read_number_as_list_indices()
+        chosen_histology_subtype_one_set = []
+        report_element_at_indices(all_histology_subtype_one_set,
+                                  cancer_list_indices_list,
+                                  chosen_histology_subtype_one_set)
 
-    all_histology_subtype_one_set = list(set(all_histology_subtype_one_set))
-    print_set_as_numbered_list(all_histology_subtype_one_set)
-    cancer_list_indices_list = read_number_as_list_indices()
-    chosen_histology_subtype_one_set = []
-    report_element_at_indices(all_histology_subtype_one_set,
-                              cancer_list_indices_list,
-                              chosen_histology_subtype_one_set)
-
-    chosen_sets = [chosen_primary_tissue_set, chosen_primary_histology_set,
-                   chosen_histology_subtype_one_set]
-    return chosen_sets
+        chosen_sets = [chosen_primary_tissue_set, chosen_primary_histology_set,
+                       chosen_histology_subtype_one_set]
+        return chosen_sets
 
 
 """3rd level function"""

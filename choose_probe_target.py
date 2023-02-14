@@ -38,9 +38,6 @@ def choose_probe_placement(
     # [position_most_tumour, cumulative_contribution, first_mutation_in_probe,
     #   last_mutation_in_probe, tumour_set_selected_position_and_probe])
 
-    for probe in mutation_list:
-        print(probe)
-
     write_output(mutation_list, 'probe.xlsx')
 
 

@@ -22,11 +22,13 @@ def main(cosmic_mutation_file_name: str, cosmic_CNV_file_name: str,
     targeting_window_size = 80
     indel_filter_threshold = 30
     cumulative_contribution_threshold = 90
+    merge_others = True
     if use_default == 'default':
         print("using default")
         use_default = True
     else:
-        remove_intronic_mutation, recurrent_definition, targeting_window_size, indel_filter_threshold, cumulative_contribution_threshold = user_chose_options()
+        remove_intronic_mutation, recurrent_definition, targeting_window_size, indel_filter_threshold, cumulative_contribution_threshold, merge_others = user_chose_options()
+        use_default = False
 
 
 
@@ -49,7 +51,8 @@ def main(cosmic_mutation_file_name: str, cosmic_CNV_file_name: str,
         recurrent_definition=recurrent_definition,
         targeting_window_size=targeting_window_size,
         indel_filter_threshold=indel_filter_threshold,
-        cumulative_contribution_threshold=cumulative_contribution_threshold)
+        cumulative_contribution_threshold=cumulative_contribution_threshold,
+        merge_others=merge_others)
 
     gene_cell_mutation_type_info_dict_CNV = {}
     read_process_file_CNV_mutation(cosmic_CNV_file_name,
