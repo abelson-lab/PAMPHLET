@@ -38,6 +38,8 @@ def choose_probe_placement(
     # [position_most_tumour, cumulative_contribution, first_mutation_in_probe,
     #   last_mutation_in_probe, tumour_set_selected_position_and_probe])
 
+    mutation_list.insert(0, ['central bp', 'cumulative contribution', 'first_mutation_in_probe',
+                             'last mutation in probe', 'mutation', 'tumour set'])
     write_output(mutation_list, 'probe.xlsx')
     write_output(indel_probe_list, 'indels_probes.xlsx')
 

@@ -60,7 +60,7 @@ def get_bool(prompt: str) -> bool:
         try:
             return {"yes": True, "no": False}[input(prompt).lower()]
         except KeyError:
-            print("Invalid input please enter Yes or No")
+            print("Invalid input please enter yes or no")
 
 
 def read_file_choose_cancer(cosmic_mutation_file_name: str,
