@@ -79,17 +79,19 @@ def read_file_choose_cancer(cosmic_mutation_file_name: str,
 
     print("searching the file to choose cancer")
     if use_default:
+        all_primary_tissue_set["haematopoietic_and_lymphoid_tissue"] = ""
+        all_primary_histology_set["haematopoietic_neoplasm"] = ""
         with open(cosmic_mutation_file_name) as mutation_file:
             csv_reader = csv.reader(mutation_file, delimiter=',')
             for row in csv_reader:
                 histology = row[12]
-                if 'T_cell' in histology or 'anaplastic' in histology \
-                        or 'lymphomatoid_papulosis' in histology \
-                        or 'post_transplant_lymphoproliferative_disorder' in histology \
-                        or 'mycosis_fungoides-Sezary_syndrome' in histology:
+                # if 'T_cell' in histology or 'anaplastic' in histology \
+                #         or 'lymphomatoid_papulosis' in histology \
+                #         or 'post_transplant_lymphoproliferative_disorder' in histology \
+                #         or 'mycosis_fungoides-Sezary_syndrome' in histology:
+                if 'myeloid_neoplasm_unspecified_therapy_related' == histology:
                     all_histology_subtype_one_set[histology] = ""
-        all_primary_tissue_set["haematopoietic_and_lymphoid_tissue"] = ""
-        all_primary_histology_set["lymphoid_neoplasm"] = ""
+
 
         chosen_primary_tissue_set = list(set(all_primary_tissue_set))
         chosen_primary_histology_set = list(set(all_primary_histology_set))
@@ -115,7 +117,8 @@ def read_file_choose_cancer(cosmic_mutation_file_name: str,
         print_set_as_numbered_list(all_primary_tissue_set)
         cancer_list_indices_list = read_number_as_list_indices()
         chosen_primary_tissue_set = []
-        report_element_at_indices(all_primary_tissue_set, cancer_list_indices_list,
+        report_element_at_indices(all_primary_tissue_set,
+                                  cancer_list_indices_list,
                                   chosen_primary_tissue_set)
 
         print("searching all primary histology")
@@ -215,7 +218,7 @@ def read_selected_genes(gene_list_file_name):
 
 # TODO I can remove this, sort of, each columns is named actually,
 def define_important_columns() -> Tuple[
-    List[str], List[str], List[int], List[int]]:
+        List[str], List[str], List[int], List[int]]:
     """
     Cosmic mutation files are organized as a table, so when reading them,
     which columns are to be read needs to be known beforehand, since the columns
@@ -225,10 +228,10 @@ def define_important_columns() -> Tuple[
     # these two should match (i.e. the 6th column should be id tumour)
     important_column_heading_list = ['id tumour', 'histology subtype 2',
                                      'histology subtype 3',
-                                     'mutation CDS', 'mutation description',
+                                     'mutation CDS', 'mutation AA', 'mutation description',
                                      'GRch', 'mutation genome position',
                                      'study id']
-    important_column_number_list = [6, 13, 14, 19, 21, 24, 25, 30]
+    important_column_number_list = [6, 13, 14, 19, 20, 21, 24, 25, 30]
     important_column_heading_list_CNV = ['id tumour', 'histology subtype 2',
                                          'histology subtype 3',
                                          'study id',
@@ -319,7 +322,7 @@ def read_mutation_file(cosmic_mutation_file_name: str,
                 if remove_intronic_mutation:
                     filter_out_flag = filter_intronic_mutations(row[19])
                 if filter_out_flag or row[12] == 'NS' or row[
-                    21] == 'Substitution - coding silent':
+                        21] == 'Substitution - coding silent':
                     continue
 
                 # if we need to only target t-cell
@@ -444,7 +447,7 @@ def check_variant_type(mutation_cds: str):
                           mutation_cds) is None \
             and re.search(
         "c\\.(\\()?[0-9]+[+\\-]\\?(_[0-9]+[+\\-]\\?)?(\\))?[ACGTdi>?]",
-        mutation_cds) is None:
+            mutation_cds) is None:
         print(mutation_cds)
 
 
