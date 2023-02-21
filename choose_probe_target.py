@@ -42,7 +42,8 @@ def choose_probe_placement(
                              'last mutation in probe', 'gene name ',
                              'just 1', 'just plus', 'first mutation',
                              'last mutation', 'color code',
-                             'cumulative contribution'])
+                             'cumulative contribution', 'probe mutations',
+                             'tumours covered', 'num tumours'])
     write_output(mutation_list, 'probe.xlsx')
     write_output(indel_probe_list, 'indels_probes.xlsx')
 
@@ -424,18 +425,23 @@ def find_probe_cover(all_position_tumour_dict: Dict[str, Set[str]],
         cumulative_contribution = len(covered_tumour_id) / len(
             recurrent_unique_tumour_id)
 
+
+        gene_name = position_gene_dict[position_most_tumour].split(';')[0]
+
         mutation_list.append([
             'chr' + chromosome,
             first_mutation_selected_position_and_probe,
             last_mutation_selected_position_and_probe,
-            position_gene_dict[position_most_tumour] + ' ' + str(num_probe),
+            gene_name + ' ' + str(num_probe),
             '1',
             '+',
             first_mutation_selected_position_and_probe,
             last_mutation_selected_position_and_probe,
             '21816532',
             cumulative_contribution,
-            all_mutation_in_probe
+            all_mutation_in_probe,
+            tumour_set_selected_position_and_probe,
+            len(tumour_set_selected_position_and_probe)
         ])
         # position most tumour is represented by its central base pair,
         # and using the dictionary, this will map back to the gene
