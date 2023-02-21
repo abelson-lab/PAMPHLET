@@ -92,44 +92,46 @@ def chose_most_recurrent_mutation_then_probe_centered_at_mutation_center(
     # combine them two
     # note that position_tumour already has insertions
     all_position_tumour_dict = {}
+    all_position_tumour_dict_substitution = {}
     all_position_tumour_dict_deletion = {}
     all_position_tumour_dict_insertion = {}
     position_gene_dict = {}
     input_list = []
     for gene, position_tumour_dict_list in gene_tumour_position.items():
 
+        # gene_tumour_position[gene_cell_type] = [
+        #     position_tumour, position_tumour_substitution, position_tumour_deletion,
+        #     position_tumour_insertion, position_mutation]
+
         position_tumour = position_tumour_dict_list[0]
+        position_tumour_substitution = position_tumour_dict_list[1]
         position_tumour_deletion = position_tumour_dict_list[2]
         position_tumour_insertion = position_tumour_dict_list[3]
-        position_change = position_tumour_dict_list[4]
+        position_mutation = position_tumour_dict_list[4]
 
         for position, tumour_set in position_tumour.items():
+            # add every mutation into a these two dict
             position_gene_dict[position] = gene
-
             all_position_tumour_dict[position] = set(tumour_set)
 
-            if position in position_change:
+            if position in position_mutation:
+                mutation_notation = set(position_mutation[position])
+                unique_tumours = set(tumour_set)
+                num_unique_tumours = len(list(set(tumour_set)))
                 input_list.append(
-                    [position, set(position_change[position]), set(tumour_set),
-                     len(list(set(tumour_set))), gene])
+                    [position, mutation_notation, unique_tumours,
+                     num_unique_tumours, gene])
+
+        for substitution, tumour_set in position_tumour_substitution.items():
+            all_position_tumour_dict_substitution[substitution] = set(tumour_set)
 
         for deletion, tumour_set in position_tumour_deletion.items():
-            position_gene_dict[deletion] = gene
-            all_position_tumour_dict[deletion] = set(tumour_set)
             all_position_tumour_dict_deletion[deletion] = set(tumour_set)
 
-            input_list.append(
-                [deletion, set(position_change[deletion]), set(tumour_set),
-                 len(list(set(tumour_set))), gene])
-
         for insertion, tumour_set in position_tumour_insertion.items():
-            position_gene_dict[insertion] = gene
             all_position_tumour_dict_insertion[insertion] = set(tumour_set)
 
-            input_list.append(
-                [insertion, set(position_change[insertion]), set(tumour_set),
-                 len(list(set(tumour_set))), gene])
-
+    # sort by the number of unique tumours
     input_list.sort(key=lambda x: x[3], reverse=True)
 
     input_list.insert(0, ['mutation_location', 'mutation aa', 'tumour set',
@@ -222,13 +224,13 @@ def get_mapping_position_tumour(all_tumour_id: List[str],
         # assert len(info['mutation genome position']) == len(info['id tumour'])
 
         position_tumour = {}
-        tumour_position = {}
+        position_tumour_substitution = {}
         position_tumour_deletion = {}
         position_tumour_insertion = {}
-        position_change = {}
+        position_mutation = {}
         gene_tumour_position[gene_cell_type] = [
-            position_tumour, tumour_position, position_tumour_deletion,
-            position_tumour_insertion, position_change]
+            position_tumour, position_tumour_substitution, position_tumour_deletion,
+            position_tumour_insertion, position_mutation]
 
         for i in range(len(info['mutation genome position'])):
             chromosome_position_range = info['mutation genome position'][i]
@@ -253,25 +255,19 @@ def get_mapping_position_tumour(all_tumour_id: List[str],
                     continue
 
                 all_tumour_id.append(tumour_id)
-                chromosome = chromosome_position_range[:semicolon_index]
-                # if it is a deletion
-                if int(position_range_end) > int(position_range_start) + 1:
-                    position_tumour_deletion.setdefault(
-                        chromosome_position_range, []).append(tumour_id)
-                    position_change.setdefault(chromosome_position_range, []).append(mutation_aa)
-                else:
-                    for position in position_list:
-                        chromosome_position = chromosome + ':' + str(position)
-                        position_tumour.setdefault(chromosome_position, []).append(tumour_id)
-                        tumour_position.setdefault(tumour_id, []).append(chromosome_position)
-                        if int(position_range_end) == int(position_range_start):
-                            position_change.setdefault(chromosome_position, []).append(mutation_aa)
 
-                # if it is an insertion
-                if int(position_range_end) == int(position_range_start) + 1:
-                    position_tumour_insertion.setdefault(
-                        chromosome_position_range, []).append(tumour_id)
-                    position_change.setdefault(chromosome_position_range, []).append(mutation_aa)
+                position_tumour.setdefault(chromosome_position_range, []).append(tumour_id)
+                position_mutation.setdefault(chromosome_position_range, []).append(mutation_aa)
+
+                # deletion
+                if int(position_range_end) > int(position_range_start) + 1:
+                    position_tumour_deletion.setdefault(chromosome_position_range, []).append(tumour_id)
+                # insertion
+                elif int(position_range_end) == int(position_range_start) + 1:
+                    position_tumour_insertion.setdefault(chromosome_position_range, []).append(tumour_id)
+                # substitution
+                else:
+                    position_tumour_substitution.setdefault(chromosome_position_range, []).append(tumour_id)
 
 
 def count_mutation_and_tumour_after_filters(
@@ -438,7 +434,8 @@ def find_probe_cover(all_position_tumour_dict: Dict[str, Set[str]],
             first_mutation_selected_position_and_probe,
             last_mutation_selected_position_and_probe,
             '21816532',
-            cumulative_contribution
+            cumulative_contribution,
+            all_mutation_in_probe
         ])
         # position most tumour is represented by its central base pair,
         # and using the dictionary, this will map back to the gene
@@ -491,16 +488,14 @@ def get_probe_covered_tumours(all_position_tumour_dict: Dict[str, Set[str]],
     tumour_set_selected_position = all_position_tumour_dict[
         position_most_tumour]
 
-    # get center of the mutation, then start search within the window size,
-    # where the mutation is still covered
-    position_list, most_tumour_range_end, most_tumour_range_start, semicolon_index = parse_chromosome_position_range(
-        position_most_tumour)
-    leftmost_probe_start = int(
-        most_tumour_range_end) - targeting_window_size + 1
+    # get leftmost and rightmost probe, then start search within the window size,
+    # this search where the mutation is still covered
+    position_list, most_tumour_range_end, most_tumour_range_start, \
+    semicolon_index = parse_chromosome_position_range(position_most_tumour)
+    leftmost_probe_start = int(most_tumour_range_end) - targeting_window_size + 1
     rightmost_probe_end = int(most_tumour_range_start) + targeting_window_size
 
-    first_mutation_selected_position_and_probe = int(
-        most_tumour_range_start) - 1
+    first_mutation_selected_position_and_probe = int(most_tumour_range_start) - 1
     last_mutation_selected_position_and_probe = int(most_tumour_range_end) + 1
     tumour_set_selected_position_and_probe = []
     tumour_set_selected_position_and_probe.extend(tumour_set_selected_position)
@@ -540,7 +535,7 @@ def get_probe_covered_tumours(all_position_tumour_dict: Dict[str, Set[str]],
             best_probe_position_dict[probe_start] = all_position_in_probe
 
             print('\t', probe_start, probe_end,
-                          len(tumour_set_selected_position_and_probe), captures_indels)
+                  len(tumour_set_selected_position_and_probe), captures_indels)
             probe_start += 1
             probe_end += 1
 
@@ -584,7 +579,7 @@ def get_probe_covered_tumours(all_position_tumour_dict: Dict[str, Set[str]],
               last_mutation_selected_position_and_probe)
 
     return first_mutation_selected_position_and_probe, last_mutation_selected_position_and_probe, \
-        tumour_set_selected_position_and_probe, chromosome, all_mutation_in_probe, captures_indels
+           tumour_set_selected_position_and_probe, chromosome, all_mutation_in_probe, captures_indels
 
 
 """4th level function"""
@@ -619,7 +614,7 @@ def merge_other_mutations_in_probe(all_position_in_probe,
     # around the center of the chosen recurrent position
     for i in range(probe_start, probe_end):
 
-        # combine position with chromosome to get genomics location
+        # combine position with chromosome to get genomic location
         a_position_in_probe = i
         position_in_genome = chromosome + ':' + str(a_position_in_probe)
 
@@ -692,6 +687,9 @@ def merge_other_mutations_in_probe(all_position_in_probe,
                 if insertion_range_end < str(probe_end) and insertion_range_start > str(probe_start):
                     # if the insertion range is not been covered
                     if the_insertion_range not in all_mutation_in_probe:
+                        tumour_set_selected_position_and_probe.extend(a_position_in_probe_tumour_set_insertion)
+                        all_position_in_probe.append(int(insertion_range_start))
+                        all_position_in_probe.append(int(insertion_range_end))
                         all_mutation_in_probe.append(the_insertion_range)
                         captures_indels = True
 
