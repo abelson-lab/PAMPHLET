@@ -75,7 +75,7 @@ def find_genes_in_cosmic_and_paper_in_paper_not_in_cosmic(
 
     # the genes in 235, but not found on cosmic
     print('remaining', len(remaining_genes))
-    write_output(remaining_genes, 'remaining_genes.xlsx')
+    # write_output(remaining_genes, 'remaining_genes.xlsx')
 
 
 def define_output_file_heading():

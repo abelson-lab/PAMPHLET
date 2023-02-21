@@ -2,6 +2,8 @@ import csv
 import re
 from typing import List, Dict, Tuple
 
+from temp import write_output
+
 
 def user_chose_options() -> Tuple[bool, int, int, int, int, bool]:
     """
@@ -303,6 +305,8 @@ def read_mutation_file(cosmic_mutation_file_name: str,
                                               chosen_primary_tissue_set,
                                               csv_reader)
 
+    row_to_look_at = []
+
     with open(cosmic_mutation_file_name) as mutation_file:
         csv_reader = csv.reader(mutation_file, delimiter=',')
         for row in csv_reader:
@@ -325,6 +329,9 @@ def read_mutation_file(cosmic_mutation_file_name: str,
                         21] == 'Substitution - coding silent':
                     continue
 
+                # if '17:7675109' in row[25]:
+                #     row_to_look_at.append(row)
+
                 # if we need to only target t-cell
                 # user would input when asked what histology subtype 1 do you want
                 #   dict_key_name should just be
@@ -343,6 +350,8 @@ def read_mutation_file(cosmic_mutation_file_name: str,
 
             # counter += 1
             # print(str(counter*100/3544360) + '%')
+
+    # write_output(row_to_look_at, 'rows.xlsx')
 
 
 def filter_intronic_mutations(mutation_CDS) -> bool:

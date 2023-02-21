@@ -89,9 +89,9 @@ def main(cosmic_mutation_file_name: str, cosmic_CNV_file_name: str,
     print('num all genes', len(sorted_all_possible_l_chip_list))
 
     # write into files
-    write_output(
-        potential_l_chip_list_headings + sorted_all_possible_l_chip_list,
-        'potential_l_chip.xlsx')
+    # write_output(
+    #     potential_l_chip_list_headings + sorted_all_possible_l_chip_list,
+    #     'potential_l_chip.xlsx')
 
 
 
