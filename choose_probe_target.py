@@ -39,7 +39,7 @@ def choose_probe_placement(
     #   last_mutation_in_probe, tumour_set_selected_position_and_probe])
 
     mutation_list.insert(0, ['chromosome', 'first_mutation_in_probe',
-                             'last mutation in probe', 'central bp',
+                             'last mutation in probe', 'gene name ',
                              'just 1', 'just plus', 'first mutation',
                              'last mutation', 'color code',
                              'cumulative contribution'])
@@ -110,7 +110,7 @@ def chose_most_recurrent_mutation_then_probe_centered_at_mutation_center(
 
             if position in position_change:
                 input_list.append(
-                    [[position], position_change[position], set(tumour_set),
+                    [position, set(position_change[position]), set(tumour_set),
                      len(list(set(tumour_set))), gene])
 
         for deletion, tumour_set in position_tumour_deletion.items():
@@ -119,7 +119,7 @@ def chose_most_recurrent_mutation_then_probe_centered_at_mutation_center(
             all_position_tumour_dict_deletion[deletion] = set(tumour_set)
 
             input_list.append(
-                [[deletion], position_change[deletion], set(tumour_set),
+                [deletion, set(position_change[deletion]), set(tumour_set),
                  len(list(set(tumour_set))), gene])
 
         for insertion, tumour_set in position_tumour_insertion.items():
@@ -127,7 +127,7 @@ def chose_most_recurrent_mutation_then_probe_centered_at_mutation_center(
             all_position_tumour_dict_insertion[insertion] = set(tumour_set)
 
             input_list.append(
-                [[insertion], position_change[insertion], set(tumour_set),
+                [insertion, set(position_change[insertion]), set(tumour_set),
                  len(list(set(tumour_set))), gene])
 
     input_list.sort(key=lambda x: x[3], reverse=True)
@@ -397,6 +397,7 @@ def find_probe_cover(all_position_tumour_dict: Dict[str, Set[str]],
     :param position_gene_dict: mapping position to gene
     :return:
     """
+    num_probe = 0
     while len(covered_tumour_id) < percentage_cover_threshold:
 
         # find the position that currently has the most tumour ids
@@ -431,7 +432,7 @@ def find_probe_cover(all_position_tumour_dict: Dict[str, Set[str]],
             'chr' + chromosome,
             first_mutation_selected_position_and_probe,
             last_mutation_selected_position_and_probe,
-            position_gene_dict[position_most_tumour],
+            position_gene_dict[position_most_tumour] + ' ' + str(num_probe),
             '1',
             '+',
             first_mutation_selected_position_and_probe,
@@ -451,15 +452,12 @@ def find_probe_cover(all_position_tumour_dict: Dict[str, Set[str]],
         cover_sizes_percentage.append(cumulative_contribution)
         print(cumulative_contribution, position_most_tumour)
 
+        all_mutation_in_probe.sort()
         if capture_indels:
             indels_probe_list.append(
                 [position_most_tumour, list(set(all_mutation_in_probe))])
 
-        # # for all set, remove tumour ids that is in current
-        # for position, tumour_set in all_position_tumour_dict.items():
-        #     tumour_set = set(tumour_set)
-        #     all_position_tumour_dict[position] = tumour_set.difference(
-        #         tumour_set_selected_position_and_probe)
+        num_probe += 1
 
 
 """3rd level function """
@@ -520,6 +518,7 @@ def get_probe_covered_tumours(all_position_tumour_dict: Dict[str, Set[str]],
         best_probe_tumour_dict = {}
         best_probe_mutation_dict = {}
         best_probe_position_dict = {}
+        best_probe_indel_flag_dict = {}
         probe_start = leftmost_probe_start
         probe_end = leftmost_probe_start + targeting_window_size
         print("position most tumour", position_most_tumour)
@@ -535,12 +534,13 @@ def get_probe_covered_tumours(all_position_tumour_dict: Dict[str, Set[str]],
                 probe_end, recurrent_definition, tumour_set_selected_position_and_probe,
                 all_position_tumour_dict_insertion, all_mutation_in_probe)
 
+            best_probe_indel_flag_dict[probe_start] = captures_indels
             best_probe_tumour_dict[probe_start] = tumour_set_selected_position_and_probe
             best_probe_mutation_dict[probe_start] = all_mutation_in_probe
             best_probe_position_dict[probe_start] = all_position_in_probe
 
             print('\t', probe_start, probe_end,
-                  len(tumour_set_selected_position_and_probe))
+                          len(tumour_set_selected_position_and_probe), captures_indels)
             probe_start += 1
             probe_end += 1
 
@@ -554,6 +554,7 @@ def get_probe_covered_tumours(all_position_tumour_dict: Dict[str, Set[str]],
         best_probe_tumour_set = best_probe_tumour_dict.get(best_range_start)
         best_probe_mutation = best_probe_mutation_dict.get(best_range_start)
         best_probe_position = best_probe_position_dict.get(best_range_start)
+        best_probe_capture_indel = best_probe_indel_flag_dict.get(best_range_start)
         assert best_probe_tumour_set is not None
         assert best_probe_mutation is not None
         assert best_probe_position is not None
@@ -572,13 +573,18 @@ def get_probe_covered_tumours(all_position_tumour_dict: Dict[str, Set[str]],
         # now one before
         first_mutation_selected_position_and_probe = best_probe_position[0] - 1
         last_mutation_selected_position_and_probe = best_probe_position[-1] + 1
+        all_mutation_in_probe = best_probe_mutation
+        tumour_set_selected_position_and_probe = best_probe_tumour_set
+
+        captures_indels = best_probe_capture_indel
 
         print('best outer range', best_range_start,
               best_range_start + targeting_window_size)
         print("best range", first_mutation_selected_position_and_probe,
               last_mutation_selected_position_and_probe)
 
-    return first_mutation_selected_position_and_probe, last_mutation_selected_position_and_probe, tumour_set_selected_position_and_probe, chromosome, all_mutation_in_probe, captures_indels
+    return first_mutation_selected_position_and_probe, last_mutation_selected_position_and_probe, \
+        tumour_set_selected_position_and_probe, chromosome, all_mutation_in_probe, captures_indels
 
 
 """4th level function"""
@@ -645,19 +651,23 @@ def merge_other_mutations_in_probe(all_position_in_probe,
             # get the deletion's tumour set
             a_position_in_probe_tumour_set_deletion = all_position_tumour_dict_deletion.get(
                 the_deletion_range)
-            # it should be mutated but check again and if it is recurrent
+            # check again if it is mutated and if it is recurrent
             if a_position_in_probe_tumour_set_deletion is not None and len(
                     a_position_in_probe_tumour_set_deletion) >= recurrent_definition:
-                # add its tumour set to the overall tumour set that probe covers
-                tumour_set_selected_position_and_probe.extend(
-                    a_position_in_probe_tumour_set_deletion)
                 position_list, deletion_range_end, deletion_range_start, semicolon_index \
                     = parse_chromosome_position_range(the_deletion_range)
-                # then add the start and end of that deletion to all positions
-                all_position_in_probe.append(int(deletion_range_start))
-                all_position_in_probe.append(int(deletion_range_end))
-                all_mutation_in_probe.append(the_deletion_range)
-                captures_indels = True
+                # if the entire deletion can be covered by the probe
+                if deletion_range_end < probe_end and deletion_range_start > probe_start:
+                    # if this deletion is not already covered
+                    if the_deletion_range not in all_mutation_in_probe:
+                        # add its tumour set to the overall tumour set that probe covers
+                        tumour_set_selected_position_and_probe.extend(
+                            a_position_in_probe_tumour_set_deletion)
+                        # then add the start and end of that deletion to all positions
+                        all_position_in_probe.append(int(deletion_range_start))
+                        all_position_in_probe.append(int(deletion_range_end))
+                        all_mutation_in_probe.append(the_deletion_range)
+                        captures_indels = True
 
         # make a dictionary mapping position to insertion range
         # check if the position belongs to an insertion
@@ -671,13 +681,19 @@ def merge_other_mutations_in_probe(all_position_in_probe,
             position_in_genome)
         if the_insertion_range is not None:
             # get the insertion's tumour set
-            a_position_in_probe_tumour_set_insertion = all_position_tumour_dict_deletion.get(
+            a_position_in_probe_tumour_set_insertion = all_position_tumour_dict_insertion.get(
                 the_insertion_range)
             # if the insertion does exist and is not recurrent
             if a_position_in_probe_tumour_set_insertion is not None and len(
                     a_position_in_probe_tumour_set_insertion) >= recurrent_definition:
-                all_mutation_in_probe.append(the_insertion_range)
-                captures_indels = True
+                position_list, insertion_range_end, insertion_range_start, semicolon_index \
+                    = parse_chromosome_position_range(the_insertion_range)
+                # if the entire deletion can be covered by the probe
+                if insertion_range_end < str(probe_end) and insertion_range_start > str(probe_start):
+                    # if the insertion range is not been covered
+                    if the_insertion_range not in all_mutation_in_probe:
+                        all_mutation_in_probe.append(the_insertion_range)
+                        captures_indels = True
 
     return captures_indels
 

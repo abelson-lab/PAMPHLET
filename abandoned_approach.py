@@ -3,7 +3,7 @@ from typing import Dict, List, Tuple, Union
 
 from matplotlib import pyplot as plt
 
-from choose_probe_target import get_mapping_position_tumour, \
+from choose_probe_target import count_mutation_and_tumour_after_filters, get_mapping_position_tumour, \
     make_position_deletion_dict, parse_chromosome_position_range
 
 """1st level function"""
