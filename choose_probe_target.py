@@ -6,7 +6,7 @@ from temp import write_output
 """the only 0th level function in this file"""
 
 
-def choose_probe_placement(
+def choose_probe_placement_point(
         gene_mutation_type_info_dict: Dict[str, dict],
         targeting_window_size: int = 80,
         cumulative_contribution_threshold: int = 90,
@@ -25,6 +25,7 @@ def choose_probe_placement(
     :param merge_others: see user_chose_options
     """
 
+    # abandoned approach
     # mutation_list = rank_all_probe_choose_most_recurrent(
     #     gene_mutation_type_info_dict, cumulative_contribution_threshold,
     #     targeting_window_size,
@@ -35,17 +36,14 @@ def choose_probe_placement(
         targeting_window_size,
         indel_filter_threshold, recurrent_definition, merge_others)
 
-    # [position_most_tumour, cumulative_contribution, first_mutation_in_probe,
-    #   last_mutation_in_probe, tumour_set_selected_position_and_probe])
-
     mutation_list.insert(0, ['chromosome', 'first_mutation_in_probe',
                              'last mutation in probe', 'gene name ',
                              'just 1', 'just plus', 'first mutation',
                              'last mutation', 'color code',
                              'cumulative contribution', 'probe mutations',
                              'tumours covered', 'num tumours'])
-    write_output(mutation_list, 'probe.xlsx')
-    write_output(indel_probe_list, 'indels_probes.xlsx')
+    write_output(mutation_list, 'range.xlsx')
+    write_output(indel_probe_list, 'indels_ranges.xlsx')
 
 
 """1st level function"""
@@ -425,7 +423,6 @@ def find_probe_cover(all_position_tumour_dict: Dict[str, Set[str]],
         cumulative_contribution = len(covered_tumour_id) / len(
             recurrent_unique_tumour_id)
 
-
         gene_name = position_gene_dict[position_most_tumour].split(';')[0]
 
         mutation_list.append([
@@ -585,7 +582,7 @@ def get_probe_covered_tumours(all_position_tumour_dict: Dict[str, Set[str]],
               last_mutation_selected_position_and_probe)
 
     return first_mutation_selected_position_and_probe, last_mutation_selected_position_and_probe, \
-           tumour_set_selected_position_and_probe, chromosome, all_mutation_in_probe, captures_indels
+        tumour_set_selected_position_and_probe, chromosome, all_mutation_in_probe, captures_indels
 
 
 """4th level function"""
@@ -622,11 +619,12 @@ def merge_other_mutations_in_probe(all_position_in_probe,
 
         # combine position with chromosome to get genomic location
         a_position_in_probe = i
+        position_range_in_genome = chromosome + ':' + str(a_position_in_probe) + '-' + str(a_position_in_probe)
         position_in_genome = chromosome + ':' + str(a_position_in_probe)
 
         # get it from non-deletions
         a_position_in_probe_tumour_set = all_position_tumour_dict.get(
-            position_in_genome)
+            position_range_in_genome)
 
         # if a position is mutated, and is recurrent
         if a_position_in_probe_tumour_set is not None and len(
@@ -636,7 +634,7 @@ def merge_other_mutations_in_probe(all_position_in_probe,
             tumour_set_selected_position_and_probe.extend(
                 a_position_in_probe_tumour_set)
             all_position_in_probe.append(a_position_in_probe)
-            all_mutation_in_probe.append(position_in_genome)
+            all_mutation_in_probe.append(position_range_in_genome)
 
         # TODO: could move making dict outside, I doing the same thing multiple times
         # make a dict mapping from position to a deletion range
@@ -646,29 +644,30 @@ def merge_other_mutations_in_probe(all_position_in_probe,
             chromosome_position_deletion_dict)
 
         # see which deletion does this position belong to
-        the_deletion_range = chromosome_position_deletion_dict.get(
+        the_deletion_range_list = chromosome_position_deletion_dict.get(
             position_in_genome)
-        if the_deletion_range is not None:
-            # get the deletion's tumour set
-            a_position_in_probe_tumour_set_deletion = all_position_tumour_dict_deletion.get(
-                the_deletion_range)
-            # check again if it is mutated and if it is recurrent
-            if a_position_in_probe_tumour_set_deletion is not None and len(
-                    a_position_in_probe_tumour_set_deletion) >= recurrent_definition:
-                position_list, deletion_range_end, deletion_range_start, semicolon_index \
-                    = parse_chromosome_position_range(the_deletion_range)
-                # if the entire deletion can be covered by the probe
-                if deletion_range_end < probe_end and deletion_range_start > probe_start:
-                    # if this deletion is not already covered
-                    if the_deletion_range not in all_mutation_in_probe:
-                        # add its tumour set to the overall tumour set that probe covers
-                        tumour_set_selected_position_and_probe.extend(
-                            a_position_in_probe_tumour_set_deletion)
-                        # then add the start and end of that deletion to all positions
-                        all_position_in_probe.append(int(deletion_range_start))
-                        all_position_in_probe.append(int(deletion_range_end))
-                        all_mutation_in_probe.append(the_deletion_range)
-                        captures_indels = True
+        if the_deletion_range_list is not None:
+            for a_deletion_range in the_deletion_range_list:
+                # get the deletion's tumour set
+                a_position_in_probe_tumour_set_deletion = all_position_tumour_dict_deletion.get(
+                    a_deletion_range)
+                # check again if it is mutated and if it is recurrent
+                if a_position_in_probe_tumour_set_deletion is not None and len(
+                        a_position_in_probe_tumour_set_deletion) >= recurrent_definition:
+                    position_list, deletion_range_end, deletion_range_start, semicolon_index \
+                        = parse_chromosome_position_range(a_deletion_range)
+                    # if the entire deletion can be covered by the probe
+                    if deletion_range_end < str(probe_end) and deletion_range_start > str(probe_start):
+                        # if this deletion is not already covered
+                        if a_deletion_range not in all_mutation_in_probe:
+                            # add its tumour set to the overall tumour set that probe covers
+                            tumour_set_selected_position_and_probe.extend(
+                                a_position_in_probe_tumour_set_deletion)
+                            # then add the start and end of that deletion to all positions
+                            all_position_in_probe.append(int(deletion_range_start))
+                            all_position_in_probe.append(int(deletion_range_end))
+                            all_mutation_in_probe.append(a_deletion_range)
+                            captures_indels = True
 
         # make a dictionary mapping position to insertion range
         # check if the position belongs to an insertion
@@ -678,26 +677,27 @@ def merge_other_mutations_in_probe(all_position_in_probe,
             chromosome_position_insertion_dict)
 
         # see which insertion does this position belong to
-        the_insertion_range = chromosome_position_insertion_dict.get(
+        the_insertion_range_list = chromosome_position_insertion_dict.get(
             position_in_genome)
-        if the_insertion_range is not None:
-            # get the insertion's tumour set
-            a_position_in_probe_tumour_set_insertion = all_position_tumour_dict_insertion.get(
-                the_insertion_range)
-            # if the insertion does exist and is not recurrent
-            if a_position_in_probe_tumour_set_insertion is not None and len(
-                    a_position_in_probe_tumour_set_insertion) >= recurrent_definition:
-                position_list, insertion_range_end, insertion_range_start, semicolon_index \
-                    = parse_chromosome_position_range(the_insertion_range)
-                # if the entire deletion can be covered by the probe
-                if insertion_range_end < str(probe_end) and insertion_range_start > str(probe_start):
-                    # if the insertion range is not been covered
-                    if the_insertion_range not in all_mutation_in_probe:
-                        tumour_set_selected_position_and_probe.extend(a_position_in_probe_tumour_set_insertion)
-                        all_position_in_probe.append(int(insertion_range_start))
-                        all_position_in_probe.append(int(insertion_range_end))
-                        all_mutation_in_probe.append(the_insertion_range)
-                        captures_indels = True
+        if the_insertion_range_list is not None:
+            for the_insertion_range in the_insertion_range_list:
+                # get the insertion's tumour set
+                a_position_in_probe_tumour_set_insertion = all_position_tumour_dict_insertion.get(
+                    the_insertion_range)
+                # if the insertion does exist and is not recurrent
+                if a_position_in_probe_tumour_set_insertion is not None and len(
+                        a_position_in_probe_tumour_set_insertion) >= recurrent_definition:
+                    position_list, insertion_range_end, insertion_range_start, semicolon_index \
+                        = parse_chromosome_position_range(the_insertion_range)
+                    # if the entire deletion can be covered by the probe
+                    if insertion_range_end < str(probe_end) and insertion_range_start > str(probe_start):
+                        # if the insertion range is not been covered
+                        if the_insertion_range not in all_mutation_in_probe:
+                            tumour_set_selected_position_and_probe.extend(a_position_in_probe_tumour_set_insertion)
+                            all_position_in_probe.append(int(insertion_range_start))
+                            all_position_in_probe.append(int(insertion_range_end))
+                            all_mutation_in_probe.append(the_insertion_range)
+                            captures_indels = True
 
     return captures_indels
 
@@ -709,33 +709,45 @@ def make_dict_chromosome_position_to_range(
         all_position_tumour_set_specific_mutation,
         chromosome_position_specific_mutation_dict):
     """make a dictionary mapping chromosome position to chromosome position range"""
+
+
+    # 42-43, 43-44
     for specific_position_range, tumour_set in all_position_tumour_set_specific_mutation.items():
         position_list, position_range_end, position_range_start, semicolon_index = parse_chromosome_position_range(
             specific_position_range)
         chromosome = specific_position_range[:semicolon_index]
         for position in position_list:
             position_in_genome = chromosome + ':' + str(position)
-            chromosome_position_specific_mutation_dict[
-                position_in_genome] = specific_position_range
+            chromosome_position_specific_mutation_dict.setdefault(position_in_genome, []).append(specific_position_range)
 
 
 def parse_chromosome_position_range(chromosome_position_range: str):
-    # example 2:3241-3276
+    # example 2:3241-3276 (for mutation)
+    # example 13:18598287..114344403 (for CNV)
     semicolon_index = chromosome_position_range.index(':')
 
     # this '8:30837618' is possible
-    if '-' not in chromosome_position_range:
+    if '..' in chromosome_position_range:
+        first_dot_index = chromosome_position_range.index('.')
+        position_range_start = chromosome_position_range[
+                               semicolon_index + 1:first_dot_index]
+        position_range_end = chromosome_position_range[first_dot_index + 2:]
+        position_list = []
+    elif '-' not in chromosome_position_range:
         position_range_start = chromosome_position_range[
                                semicolon_index + 1:]
         position_range_end = position_range_start
+        position_list = list(range(int(position_range_start),
+                                   int(position_range_end) + 1))
     else:
         dash_index = chromosome_position_range.index('-')
         position_range_start = chromosome_position_range[
                                semicolon_index + 1:dash_index]
         position_range_end = chromosome_position_range[dash_index + 1:]
+        position_list = list(range(int(position_range_start),
+                                   int(position_range_end) + 1))
 
-    position_list = list(range(int(position_range_start),
-                               int(position_range_end) + 1))
+
     return position_list, position_range_end, position_range_start, semicolon_index
 
 

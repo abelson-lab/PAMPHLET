@@ -5,7 +5,7 @@ from typing import List, Dict, Tuple
 from temp import write_output
 
 
-def user_chose_options() -> Tuple[bool, int, int, int, int, bool]:
+def user_chose_options() -> Tuple[bool, int, int, int, int, bool, bool]:
     """
     Ask the user to choose their options, from do they want to remove intronic mutation,
     what is their definition of recurrent mutation, targeting window size,
@@ -35,6 +35,12 @@ def user_chose_options() -> Tuple[bool, int, int, int, int, bool]:
         " or do you want to have one probe target only one mutation,"
         " enter yes if you want to, default is yes ")
 
+    cover_entire_gene = get_bool(
+        "Do you want to cover an entire gene?"
+        " this is in addition to all the other probes"
+        "default is no,"
+    )
+
     if remove_intronic_mutation == "yes":
         remove_intronic_mutation = True
     else:
@@ -50,7 +56,9 @@ def user_chose_options() -> Tuple[bool, int, int, int, int, bool]:
     indel_filter_threshold = int(indel_filter_threshold)
     cumulative_contribution_threshold = int(cumulative_contribution_threshold)
 
-    return remove_intronic_mutation, recurrent_definition, targeting_window_size, indel_filter_threshold, cumulative_contribution_threshold, merge_other
+    return remove_intronic_mutation, recurrent_definition, targeting_window_size, \
+        indel_filter_threshold, cumulative_contribution_threshold, merge_other, \
+        cover_entire_gene
 
 
 """second level function"""
@@ -66,10 +74,11 @@ def get_bool(prompt: str) -> bool:
 
 
 def read_file_choose_cancer(cosmic_mutation_file_name: str,
-                            use_default: bool) -> List[List[str]]:
+                            use_default: bool, search_CNV: bool) -> List[List[str]]:
     """
     Reads the cosmic file, then ask the user to choose the primary tissue,
     the primary histology, and the histology subtype one they want to target
+    :param search_CNV: whether we are searching in the CNV file or not
     :param cosmic_mutation_file_name: The file name of the cosmic mutation file,
     it is under COSMIC Mutation on the cosmic website
     :param use_default: chose t-cell cancers
@@ -79,21 +88,34 @@ def read_file_choose_cancer(cosmic_mutation_file_name: str,
     all_primary_histology_set = {}
     all_histology_subtype_one_set = {}
 
+    if search_CNV:
+        primary_tissue_col_num = 5
+        primary_histology_col_num = 9
+        histology_type_1_col_num = 10
+    else:
+        primary_tissue_col_num = 7
+        primary_histology_col_num = 11
+        histology_type_1_col_num = 12
+
     print("searching the file to choose cancer")
     if use_default:
         all_primary_tissue_set["haematopoietic_and_lymphoid_tissue"] = ""
-        all_primary_histology_set["haematopoietic_neoplasm"] = ""
+        all_primary_histology_set["lymphoid_neoplasm"] = ""
+        # all_primary_histology_set["haematopoietic_neoplasm"] = ""
         with open(cosmic_mutation_file_name) as mutation_file:
             csv_reader = csv.reader(mutation_file, delimiter=',')
             for row in csv_reader:
-                histology = row[12]
-                # if 'T_cell' in histology or 'anaplastic' in histology \
-                #         or 'lymphomatoid_papulosis' in histology \
-                #         or 'post_transplant_lymphoproliferative_disorder' in histology \
-                #         or 'mycosis_fungoides-Sezary_syndrome' in histology:
-                if 'myeloid_neoplasm_unspecified_therapy_related' == histology:
+                # mutation file this is row 12, CNV its row 10
+                histology = row[histology_type_1_col_num]
+                if 'T_cell' in histology or 'anaplastic' in histology \
+                        or 'lymphomatoid_papulosis' in histology \
+                        or 'post_transplant_lymphoproliferative_disorder' in histology \
+                        or 'mycosis_fungoides-Sezary_syndrome' in histology:
                     all_histology_subtype_one_set[histology] = ""
-
+                if 'myelo' in histology:
+                    all_histology_subtype_one_set[histology] = ""
+                # if 'myeloid_neoplasm_unspecified_therapy_related' == histology:
+                #     all_histology_subtype_one_set[histology] = ""
 
         chosen_primary_tissue_set = list(set(all_primary_tissue_set))
         chosen_primary_histology_set = list(set(all_primary_histology_set))
@@ -112,8 +134,8 @@ def read_file_choose_cancer(cosmic_mutation_file_name: str,
             csv_reader = csv.reader(mutation_file, delimiter=',')
 
             for row in csv_reader:
-                if row[7] not in all_primary_tissue_set:
-                    all_primary_tissue_set[row[7]] = ""
+                if row[primary_tissue_col_num] not in all_primary_tissue_set:
+                    all_primary_tissue_set[row[primary_tissue_col_num]] = ""
 
         all_primary_tissue_set = list(set(all_primary_tissue_set))
         print_set_as_numbered_list(all_primary_tissue_set)
@@ -127,9 +149,9 @@ def read_file_choose_cancer(cosmic_mutation_file_name: str,
         with open(cosmic_mutation_file_name) as mutation_file:
             csv_reader = csv.reader(mutation_file, delimiter=',')
             for row in csv_reader:
-                if row[7] in chosen_primary_tissue_set \
-                        and row[11] not in all_primary_histology_set:
-                    all_primary_histology_set[row[11]] = ""
+                if row[primary_tissue_col_num] in chosen_primary_tissue_set \
+                        and row[primary_histology_col_num] not in all_primary_histology_set:
+                    all_primary_histology_set[row[primary_histology_col_num]] = ""
 
         all_primary_histology_set = list(set(all_primary_histology_set))
         print_set_as_numbered_list(all_primary_histology_set)
@@ -143,10 +165,10 @@ def read_file_choose_cancer(cosmic_mutation_file_name: str,
         with open(cosmic_mutation_file_name) as mutation_file:
             csv_reader = csv.reader(mutation_file, delimiter=',')
             for row in csv_reader:
-                if row[7] in chosen_primary_tissue_set \
-                        and row[11] in chosen_primary_histology_set \
-                        and row[12] not in all_histology_subtype_one_set:
-                    all_histology_subtype_one_set[row[12]] = ""
+                if row[primary_tissue_col_num] in chosen_primary_tissue_set \
+                        and row[primary_histology_col_num] in chosen_primary_histology_set \
+                        and row[histology_type_1_col_num] not in all_histology_subtype_one_set:
+                    all_histology_subtype_one_set[row[histology_type_1_col_num]] = ""
 
         all_histology_subtype_one_set = list(set(all_histology_subtype_one_set))
         print_set_as_numbered_list(all_histology_subtype_one_set)
@@ -234,11 +256,9 @@ def define_important_columns() -> Tuple[
                                      'GRch', 'mutation genome position',
                                      'study id']
     important_column_number_list = [6, 13, 14, 19, 20, 21, 24, 25, 30]
-    important_column_heading_list_CNV = ['id tumour', 'histology subtype 2',
-                                         'histology subtype 3',
-                                         'study id',
-                                         'GRch', 'mutation genome position']
-    important_column_number_list_CNV = [4, 11, 12, 17, 18, 19]
+    important_column_heading_list_CNV = ['gene name', 'id tumour', 'mutation type',
+                                         'CNV coordinates']
+    important_column_number_list_CNV = [2, 4, 16, 19]
     return important_column_heading_list, important_column_heading_list_CNV, important_column_number_list, important_column_number_list_CNV
 
 
@@ -304,8 +324,6 @@ def read_mutation_file(cosmic_mutation_file_name: str,
                                               chosen_primary_histology_set,
                                               chosen_primary_tissue_set,
                                               csv_reader)
-
-    row_to_look_at = []
 
     with open(cosmic_mutation_file_name) as mutation_file:
         csv_reader = csv.reader(mutation_file, delimiter=',')
@@ -567,16 +585,13 @@ def check_intronic_mutation_diff_intron(mutation_CDS: str):
 def read_process_file_CNV_mutation(cosmic_CNV_file_name,
                                    gene_cell_mutation_type_info_dict_CNV,
                                    important_column_heading_list_CNV,
-                                   important_column_number_list_CNV):
+                                   important_column_number_list_CNV, chosen_set):
     # each gene cell-type refers to the gene ABC in t-cell CNV
 
-    cell_type_num_tumor_dict_CNV = {}
     read_CNV_file(cosmic_CNV_file_name,
                   gene_cell_mutation_type_info_dict_CNV,
                   important_column_heading_list_CNV,
-                  important_column_number_list_CNV)
-    print('gene cell-type pair CNV', len(gene_cell_mutation_type_info_dict_CNV))
-    print('CNV cell type distribution', cell_type_num_tumor_dict_CNV)
+                  important_column_number_list_CNV, chosen_set)
     # and store in gene_mutation_type_info_dict_CNV
     calculate_CNV_frequency(gene_cell_mutation_type_info_dict_CNV)
 
@@ -584,35 +599,30 @@ def read_process_file_CNV_mutation(cosmic_CNV_file_name,
 def read_CNV_file(cosmic_CNV_file_name,
                   gene_cell_mutation_type_dict_CNV,
                   important_column_heading_list_CNV,
-                  important_column_number_list_CNV):
+                  important_column_number_list_CNV,
+                  chosen_set):
+    chosen_primary_tissue_set = chosen_set[0]
+    chosen_primary_histology_set = chosen_set[1]
+    chosen_histology_subtype_one_set = chosen_set[2]
+
     with open(cosmic_CNV_file_name) as CNV_file:
         csv_reader = csv.reader(CNV_file, delimiter=',')
         for row in csv_reader:
             # 2, 9, 10, 11, 12, 13.  17, 18, 19
             # gene name, primary histology and its subtypes (3), sample name,
             # study id, GRch, genomic coordinate
-            if row[9] == 'lymphoid_neoplasm':
+            # if this mutation belong to a chosen cancer
+            if row[5] in chosen_primary_tissue_set \
+                    and row[9] in chosen_primary_histology_set \
+                    and row[10] in chosen_histology_subtype_one_set:
+
                 gene_ensembl = row[2].split('_')
                 gene_name = gene_ensembl[0]
 
                 if row[10] == 'NS':
                     continue
 
-                histology = row[10]
-                if 'T_cell' in histology or 'anaplastic' in histology \
-                        or 'lymphomatoid_papulosis' in histology \
-                        or 'post_transplant_lymphoproliferative_disorder' in histology \
-                        or 'mycosis_fungoides-Sezary_syndrome' in histology:
-                    dict_key_name = gene_name + ';' + 'T_cell' + ';' + 'CNV'
-                elif 'B_cell' in histology or 'Burkitt' in histology or 'chronic' in histology \
-                        or 'follicular_lymphoma' in histology or 'hairy' in histology \
-                        or 'hodgkin' in histology or 'lymphoplasmacytic_lymphoma' in histology \
-                        or 'mantle' in histology or 'marginal' in histology \
-                        or 'plasma_cell_myeloma' in histology or 'plasmacytoma' in histology \
-                        or 'effusion' in histology or 'MALT' in histology:
-                    dict_key_name = gene_name + ';' + 'B_cell' + ';' + 'CNV'
-                else:
-                    dict_key_name = gene_name + ';' + 'Other' + ';' + 'CNV'
+                dict_key_name = gene_name + ';' + 'CNV'
 
                 specific_gene_histology_dict_CNV = gene_cell_mutation_type_dict_CNV.setdefault(
                     dict_key_name, {})
