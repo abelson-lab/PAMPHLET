@@ -41,7 +41,7 @@ def choose_probe_placement_CNV(
     input_list_CNV.insert(0, ['gene', 'CNV coordinates', 'mutation type', 'unique tumours',
                               'number of unique tumours'])
 
-    write_output(input_list_CNV, 'input_gene_CNV.xlsx')
+    write_output(input_list_CNV, 'input_gene_CNV_cosmic.xlsx')
 
 
 def visualize_CNV_on_IGV(gene_mutation_type_info_dict):

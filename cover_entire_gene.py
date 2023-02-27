@@ -1,12 +1,10 @@
-from time import sleep
-
 from temp import write_output
 
 
 def make_probe_these_gene(reference_genome_filename, targeting_window_size):
     # first collect all gene name
     gene_name_dict = {}
-    with open('/Users/kren/Desktop/refGene.txt') as refseq_genes:
+    with open(reference_genome_filename) as refseq_genes:
         for gene_transcript in refseq_genes:
             gene_transcript_info_list = gene_transcript.split('\t')
             gene_name = gene_transcript_info_list[12]
@@ -24,7 +22,7 @@ def make_probe_these_gene(reference_genome_filename, targeting_window_size):
     # its protein coding (NM_, XM_) vs non-coding (NR_, XR_)
     # see https://www.ncbi.nlm.nih.gov/refseq/refseq_select/
     # next collect all coding exons range for each gene transcript
-    with open('/Users/kren/Desktop/refGene.txt') as refseq_genes:
+    with open(reference_genome_filename) as refseq_genes:
         gene_coding_exon_ranges_dict = {}
         # each line correspond to one gene transcript
         # each line is a tab separated string
@@ -66,7 +64,6 @@ def make_probe_these_gene(reference_genome_filename, targeting_window_size):
                         this_coding_exon_start = this_exon_start
                     else:
                         print('something is wrong')
-                        sleep(30)
 
                     if this_exon_end > coding_region_end:
                         this_coding_exon_end = coding_region_end
@@ -74,7 +71,6 @@ def make_probe_these_gene(reference_genome_filename, targeting_window_size):
                         this_coding_exon_end = this_exon_end
                     else:
                         print('something is wrong')
-                        sleep(30)
 
                     gene_transcript_coding_exon_ranges.append([int(this_coding_exon_start), int(this_coding_exon_end)])
 

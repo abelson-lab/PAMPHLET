@@ -92,26 +92,27 @@ def read_file_choose_cancer(cosmic_mutation_file_name: str,
         primary_tissue_col_num = 5
         primary_histology_col_num = 9
         histology_type_1_col_num = 10
+        print("searching the CNV file to choose cancer")
     else:
         primary_tissue_col_num = 7
         primary_histology_col_num = 11
         histology_type_1_col_num = 12
+        print("searching the mutation file to choose cancer")
 
-    print("searching the file to choose cancer")
     if use_default:
         all_primary_tissue_set["haematopoietic_and_lymphoid_tissue"] = ""
-        all_primary_histology_set["lymphoid_neoplasm"] = ""
-        # all_primary_histology_set["haematopoietic_neoplasm"] = ""
+        all_primary_histology_set["haematopoietic_neoplasm"] = ""
+        # all_primary_histology_set["lymphoid_neoplasm"] = ""
         with open(cosmic_mutation_file_name) as mutation_file:
             csv_reader = csv.reader(mutation_file, delimiter=',')
             for row in csv_reader:
                 # mutation file this is row 12, CNV its row 10
                 histology = row[histology_type_1_col_num]
-                if 'T_cell' in histology or 'anaplastic' in histology \
-                        or 'lymphomatoid_papulosis' in histology \
-                        or 'post_transplant_lymphoproliferative_disorder' in histology \
-                        or 'mycosis_fungoides-Sezary_syndrome' in histology:
-                    all_histology_subtype_one_set[histology] = ""
+                # if 'T_cell' in histology or 'anaplastic' in histology \
+                #         or 'lymphomatoid_papulosis' in histology \
+                #         or 'post_transplant_lymphoproliferative_disorder' in histology \
+                #         or 'mycosis_fungoides-Sezary_syndrome' in histology:
+                #     all_histology_subtype_one_set[histology] = ""
                 if 'myelo' in histology:
                     all_histology_subtype_one_set[histology] = ""
                 # if 'myeloid_neoplasm_unspecified_therapy_related' == histology:
@@ -582,10 +583,10 @@ def check_intronic_mutation_diff_intron(mutation_CDS: str):
 
 # TODO combine these three function with read mutation file and calculate mutation frequency
 
-def read_process_file_CNV_mutation(cosmic_CNV_file_name,
-                                   gene_cell_mutation_type_info_dict_CNV,
-                                   important_column_heading_list_CNV,
-                                   important_column_number_list_CNV, chosen_set):
+def read_process_file_CNV_mutation_cosmic(cosmic_CNV_file_name,
+                                          gene_cell_mutation_type_info_dict_CNV,
+                                          important_column_heading_list_CNV,
+                                          important_column_number_list_CNV, chosen_set):
     # each gene cell-type refers to the gene ABC in t-cell CNV
 
     read_CNV_file(cosmic_CNV_file_name,
@@ -658,3 +659,37 @@ def calculate_CNV_frequency(gene_mutation_type_info_dict_CNV):
         info['frequency percentage'] = frequency_percentage
         info['num_tumour_gene_cell_type'] = len(set(info['id tumour']))
         info['num_tumour_total_cell_type'] = num_tumour_total
+
+
+def read_process_file_CNV_mutation_cbioportal(CNV_file_name, reference_genome_filename):
+
+    gene_name_dict = {}
+    with open(reference_genome_filename) as refseq_genes:
+        next(refseq_genes)
+        for gene_transcript in refseq_genes:
+            gene_transcript_info_list = gene_transcript.split('\t')
+            gene_name = gene_transcript_info_list[12]
+            gene_name_dict[gene_name] = ''
+
+
+    CNV_genes = []
+    with open(CNV_file_name) as cnv_file:
+        next(cnv_file)
+        for gene_cna_info in cnv_file:
+            cna_gene_list = gene_cna_info.split('\t')
+            gene_name = cna_gene_list[0]
+            # the number of sample with at least one CNA that involves this gene
+            sample_CNA_gene = int(cna_gene_list[4])
+            # the number of samples that was profiled for this gene
+            profiled_sample = int(cna_gene_list[5])
+            # frequency, sample_CNA_gene /profiled_sample
+            # frequency = cna_gene_list[6]
+            CNV_genes.append([gene_name, sample_CNA_gene, profiled_sample])
+
+    CNV_genes.sort(key=lambda x: x[1], reverse=True)
+
+    CNV_genes.insert(0, ['gene name', 'number of mutated samples',
+                         'number of profiled samples' ])
+
+    write_output(CNV_genes, 'input_gene_CNV_cbioportal.xlsx')
+
