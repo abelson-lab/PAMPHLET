@@ -57,5 +57,16 @@ the user would like to target.
 the 3 lines button and hover over download, and then
 click on data 
 
+### To download gene prediction track file
+1. Go to UCSC Table browser (https://genome.ucsc.edu/cgi-bin/hgTables)
+2. Select the following options, output filename can be anything
+![img.png](UCSC table browser options.png)
+3. Change it to .csv extension, and select csv
+(for excel) in output field separator if you want
+to view it in excel
+![img.png](USCS table browser excel options.png)
+
+
+
 
 ## Running the code
