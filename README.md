@@ -27,9 +27,27 @@ This pipeline requires the following software and packages:
 ## Description
 This tools takes as an input a cosmic mutation file,
 a cbioportal or cosmic CNV file, and a UCSC gene prediction
-track. 
-It reads the cosmic mutation file to provide the user
-a list of cancers in the file, 
+track. It applies a set of user-defined filter to remove mutation from uninterested cancers,
+intronic mutations, large indels, non-recurrent mutation. Optionally, genes can
+be chosen to be targeted in its entirety, which will produce an additional output
+of coding exon ranges. 
+
+In the cosmic mutation file, there is one entry per genomic location per tumour
+per sample, which mean that the same mutation from different tumour will exist 
+as separate entries. First, this tool merges the entries into one mutation if
+they share the exact same coordinates. Second, it ranks each mutation by its
+number of tumours. Third, starting with the mutation with the greatest number of
+tumours, for each mutation, it checks for all targeting windows with a user
+defined window size that covers the mutation in question, and see which one covers
+the most entries. Fourth, all mutations covered by a best targeting window will be
+ignored for the next selection of a best targeting window. Fifth, if a best
+targeting window covers an indel, then it will be noted. 
+
+The final output are a table ranking the point mutation by the number of tumours,
+a minimal list of minimal ranges targeting mutation based on the ranking of the
+aforementioned table, a subset of the minimal list that covers indels, and (for CNV)
+Graphically, 
+
 ## Configuration 
 ### To download the COSMIC mutation and CNV file
 1. Go to COSMIC (https://cancer.sanger.ac.uk/cosmic)
@@ -65,8 +83,5 @@ click on data
 (for excel) in output field separator if you want
 to view it in excel
 ![img.png](./UCSC_table_browser_excel_options.png)
-
-
-
 
 ## Running the code

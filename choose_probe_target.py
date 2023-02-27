@@ -349,7 +349,7 @@ def count_mutation_and_tumour_after_filters(
     return recurrent_unique_tumour_id
 
 
-# TODO refactor this, since it is pretty similar to finding cover greedy
+
 def find_probe_cover(all_position_tumour_dict: Dict[str, Set[str]],
                      cover_sizes_percentage: List[float],
                      covered_tumour_id: List[str],
