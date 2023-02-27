@@ -64,7 +64,7 @@ click on data
 3. Change it to .csv extension, and select csv
 (for excel) in output field separator if you want
 to view it in excel
-![img.png](USCS table browser excel options.png)
+![img.png](UCSC table browser excel options.png)
 
 
 
