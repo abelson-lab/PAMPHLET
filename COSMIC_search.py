@@ -24,7 +24,7 @@ def main(cosmic_mutation_file_name: str, CNV_source: str, CNV_file_name: str,
     indel_filter_threshold = 30
     cumulative_contribution_threshold = 90
     merge_others = True
-    cover_entire_gene = False
+    cover_entire_gene = True
     if use_default == 'default':
         print("using default")
         use_default = True
@@ -34,7 +34,7 @@ def main(cosmic_mutation_file_name: str, CNV_source: str, CNV_file_name: str,
         use_default = False
 
     if cover_entire_gene:
-        make_probe_these_gene(reference_genome_filename, targeting_window_size)
+        make_probe_these_gene(reference_genome_filename)
 
 
     # # TODO this is where you add more genes, from other papers

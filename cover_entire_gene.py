@@ -1,7 +1,7 @@
 from temp import write_output
 
 
-def make_probe_these_gene(reference_genome_filename, targeting_window_size):
+def make_probe_these_gene(reference_genome_filename):
     # first collect all gene name
     gene_name_dict = {}
     with open(reference_genome_filename) as refseq_genes:
@@ -17,6 +17,11 @@ def make_probe_these_gene(reference_genome_filename, targeting_window_size):
     for gene in genes_to_cover:
         if gene not in gene_name_dict:
             print(gene, "is not found")
+            genes_to_cover.remove(gene)
+
+    if len(genes_to_cover) == 0:
+        print("no genes to cover")
+        return
 
     # note only coding transcript are included in this file
     # its protein coding (NM_, XM_) vs non-coding (NR_, XR_)
