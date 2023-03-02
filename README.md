@@ -90,10 +90,10 @@ to view it in excel
 Go to the directory where you put the code files and type into the terminal
 (if you are using cbioportal for CNV)
 ```
-python3 COSMIC_search.py -m <cosmic mutation filename> -c <cbioportal CNV file name> -s cbioportal -r <refseq gene filename>
+python3 COSMIC_search.py -m <cosmic mutation filename> -c cbioportal CNV file name> -s cbioportal -r <refseq gene filename>
 ```
 
 (if you are using cosmic for CNV)
 ```
-python3 COSMIC_search.py -m <cosmic mutation filename> -c <cosmic CNV file name> -s cosmic -r <refseq gene filename>
+python3 COSMIC_search.py -m <cosmic mutation filename> -c cosmic CNV file name> -s cosmic -r <refseq gene filename>
 ```
