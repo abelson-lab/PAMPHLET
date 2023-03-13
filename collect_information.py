@@ -2,10 +2,11 @@ import csv
 import re
 from typing import List, Dict, Tuple
 
+from choose_probe_target_CNV import divide_CNV_by_gene
 from temp import write_output
 
 
-def user_chose_options() -> Tuple[bool, int, int, int, int, bool, bool]:
+def user_chose_options() -> Tuple[bool, int, int, int, int, bool, bool, int, int]:
     """
     Ask the user to choose their options, from do they want to remove intronic mutation,
     what is their definition of recurrent mutation, targeting window size,
@@ -41,6 +42,16 @@ def user_chose_options() -> Tuple[bool, int, int, int, int, bool, bool]:
         "default is no,"
     )
 
+    informative_individual_percentage = input(
+        "Where 1 means 100%, What is the percentage of individuals with an informative output, meaning"
+        " having the heterozygous minor allele in all the targeted SNP sites, a number greater than"
+        " 1, for example 5, means that all individuals is expected to have on"
+        " average 5 sites with informative output, default is 5")
+
+    num_probe_per_individual = input(
+        "How many SNP sites do you want to target, that is the number of probe"
+        "for each individual, default is 100")
+
     if remove_intronic_mutation == "yes":
         remove_intronic_mutation = True
     else:
@@ -55,10 +66,12 @@ def user_chose_options() -> Tuple[bool, int, int, int, int, bool, bool]:
     targeting_window_size = int(targeting_window_size)
     indel_filter_threshold = int(indel_filter_threshold)
     cumulative_contribution_threshold = int(cumulative_contribution_threshold)
+    informative_individual_percentage = int(informative_individual_percentage)
+    num_probe_per_individual = int(num_probe_per_individual)
 
     return remove_intronic_mutation, recurrent_definition, targeting_window_size, \
         indel_filter_threshold, cumulative_contribution_threshold, merge_other, \
-        cover_entire_gene
+        cover_entire_gene, informative_individual_percentage, num_probe_per_individual
 
 
 """second level function"""
@@ -345,7 +358,7 @@ def read_mutation_file(cosmic_mutation_file_name: str,
                 if remove_intronic_mutation:
                     filter_out_flag = filter_intronic_mutations(row[19])
                 if filter_out_flag or row[12] == 'NS' or row[
-                        21] == 'Substitution - coding silent':
+                    21] == 'Substitution - coding silent':
                     continue
 
                 # if '17:7675109' in row[25]:
@@ -475,7 +488,7 @@ def check_variant_type(mutation_cds: str):
                           mutation_cds) is None \
             and re.search(
         "c\\.(\\()?[0-9]+[+\\-]\\?(_[0-9]+[+\\-]\\?)?(\\))?[ACGTdi>?]",
-            mutation_cds) is None:
+        mutation_cds) is None:
         print(mutation_cds)
 
 
@@ -595,6 +608,9 @@ def read_process_file_CNV_mutation_cosmic(cosmic_CNV_file_name,
                   important_column_number_list_CNV, chosen_set)
     # and store in gene_mutation_type_info_dict_CNV
     calculate_CNV_frequency(gene_cell_mutation_type_info_dict_CNV)
+    CNV_genes = divide_CNV_by_gene(gene_cell_mutation_type_info_dict_CNV)
+
+    return CNV_genes
 
 
 def read_CNV_file(cosmic_CNV_file_name,
@@ -661,17 +677,7 @@ def calculate_CNV_frequency(gene_mutation_type_info_dict_CNV):
         info['num_tumour_total_cell_type'] = num_tumour_total
 
 
-def read_process_file_CNV_mutation_cbioportal(CNV_file_name, reference_genome_filename):
-
-    gene_name_dict = {}
-    with open(reference_genome_filename) as refseq_genes:
-        next(refseq_genes)
-        for gene_transcript in refseq_genes:
-            gene_transcript_info_list = gene_transcript.split('\t')
-            gene_name = gene_transcript_info_list[12]
-            gene_name_dict[gene_name] = ''
-
-
+def read_process_file_CNV_mutation_cbioportal(CNV_file_name):
     CNV_genes = []
     with open(CNV_file_name) as cnv_file:
         next(cnv_file)
@@ -689,7 +695,6 @@ def read_process_file_CNV_mutation_cbioportal(CNV_file_name, reference_genome_fi
     CNV_genes.sort(key=lambda x: x[1], reverse=True)
 
     CNV_genes.insert(0, ['gene name', 'number of mutated samples',
-                         'number of profiled samples' ])
+                         'number of profiled samples'])
 
-    write_output(CNV_genes, 'input_gene_CNV_cbioportal.xlsx')
-
+    return CNV_genes

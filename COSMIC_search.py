@@ -2,21 +2,21 @@
 import argparse
 
 from choose_probe_target import choose_probe_placement_point
-from choose_probe_target_CNV import choose_probe_placement_CNV
+from choose_probe_target_CNV import choose_SNP_targets, divide_CNV_by_gene
 from collect_information import define_important_columns, \
     read_file_choose_cancer, \
     read_process_file_CNV_mutation_cbioportal, read_process_file_CNV_mutation_cosmic, read_process_file_point_mutation, \
     user_chose_options
+# from temp import define_output_file_heading
+from cover_entire_gene import make_probe_these_gene
 from temp import \
     convert_dict_list, \
-    define_output_file_heading, \
     find_num_gene_only_CNV, \
     integrate_CNV_point_mutation_info
-from cover_entire_gene import make_probe_these_gene
 
 
-def main(cosmic_mutation_file_name: str, CNV_source: str, CNV_file_name: str,
-         reference_genome_filename: str, use_default: str):
+def main(cosmic_mutation_filename: str, CNV_source: str, CNV_filename: str,
+         reference_genome_filename: str, common_snp_filename: str, use_default: str):
 
     remove_intronic_mutation = True
     recurrent_definition = 2
@@ -24,14 +24,19 @@ def main(cosmic_mutation_file_name: str, CNV_source: str, CNV_file_name: str,
     indel_filter_threshold = 30
     cumulative_contribution_threshold = 90
     merge_others = True
-    cover_entire_gene = True
+    cover_entire_gene = False
+    informative_individual_percentage = 5
+    num_probe_per_individual = 100
     if use_default == 'default':
         print("using default")
         use_default = True
     else:
         remove_intronic_mutation, recurrent_definition, targeting_window_size, indel_filter_threshold,\
-        cumulative_contribution_threshold, merge_others, cover_entire_gene = user_chose_options()
+        cumulative_contribution_threshold, merge_others, cover_entire_gene,\
+        informative_individual_percentage, num_probe_per_individual = user_chose_options()
         use_default = False
+
+    needed_minor_allele_frequency = informative_individual_percentage / num_probe_per_individual
 
     if cover_entire_gene:
         make_probe_these_gene(reference_genome_filename)
@@ -43,32 +48,31 @@ def main(cosmic_mutation_file_name: str, CNV_source: str, CNV_file_name: str,
     important_column_heading_list, important_column_heading_list_CNV, important_column_number_list, important_column_number_list_CNV = define_important_columns()
 
     gene_mutation_type_info_dict_CNV = {}
+
     if CNV_source == 'cosmic':
-        chosen_set = read_file_choose_cancer(CNV_file_name, use_default, search_CNV=True)
-        read_process_file_CNV_mutation_cosmic(
-            CNV_file_name,
+        chosen_set = read_file_choose_cancer(CNV_filename, use_default, search_CNV=True)
+        CNV_genes = read_process_file_CNV_mutation_cosmic(
+            CNV_filename,
             gene_mutation_type_info_dict_CNV,
             important_column_heading_list_CNV,
             important_column_number_list_CNV, chosen_set,
         )
     elif CNV_source == 'cbioportal':
-        read_process_file_CNV_mutation_cbioportal(
-            CNV_file_name,
-            reference_genome_filename
+        CNV_genes = read_process_file_CNV_mutation_cbioportal(
+            CNV_filename
         )
+    else:
+        exit('CNV is neither from cosmic nor cbioportal')
+        CNV_genes = []
+
+    choose_SNP_targets(CNV_genes, reference_genome_filename, needed_minor_allele_frequency,
+                       common_snp_filename)
 
 
-    choose_probe_placement_CNV(
-        gene_mutation_type_info_dict_CNV,
-        recurrent_definition=recurrent_definition,
-        targeting_window_size=targeting_window_size,
-        cumulative_contribution_threshold=cumulative_contribution_threshold,
-    )
-
-    chosen_set = read_file_choose_cancer(cosmic_mutation_file_name, use_default, search_CNV=False)
+    chosen_set = read_file_choose_cancer(cosmic_mutation_filename, use_default, search_CNV=False)
 
     gene_mutation_type_info_dict = {}
-    read_process_file_point_mutation(cosmic_mutation_file_name,
+    read_process_file_point_mutation(cosmic_mutation_filename,
                                      gene_mutation_type_info_dict,
                                      important_column_heading_list,
                                      important_column_number_list, chosen_set,
@@ -96,7 +100,7 @@ def main(cosmic_mutation_file_name: str, CNV_source: str, CNV_file_name: str,
     #     all_possible_l_chip_dict, l_chip_gene_set_1)
 
     # turn dict into list, and sort them based on frequency
-    potential_l_chip_list_headings = define_output_file_heading()
+    # potential_l_chip_list_headings = define_output_file_heading()
 
     all_possible_l_chip_list = []
     convert_dict_list(all_possible_l_chip_dict,
@@ -145,20 +149,22 @@ if __name__ == "__main__":
 
     parser = argparse.ArgumentParser()
 
-    parser.add_argument('-m', '--mutation', help='cosmic mutation file name',
+    parser.add_argument('-m', '--mutation', help='full path to cosmic mutation file',
                         type=str, required=True)
-    parser.add_argument('-c', '--CNV', help='cosmic or cbioportal CNV file name',
+    parser.add_argument('-c', '--CNV', help='full path to cosmic or cbioportal CNV file name',
                         type=str, required=True)
     parser.add_argument('-s', '--source', help='CNV from cosmic or cbioportal',
                         type=str, required=True, choices=['cosmic', 'cbioportal'])
-    parser.add_argument('-r', '--refgene', help='UCSC gene prediction tracks',
+    parser.add_argument('-r', '--refgene', help='full path UCSC gene prediction tracks file',
+                        type=str, required=True)
+    parser.add_argument('-p', '--snp', help='full path to snp file name',
                         type=str, required=True)
     parser.add_argument('-d', '--default', help='for development purposes, do not use',
                         type=str, default='no', required=False)
     args = parser.parse_args()
 
-    # cosmic_mutation_file_name: str, CNV_file_name: str, reference_genome_filename: str,
+    # cosmic_mutation_filename: str, CNV_filename: str, reference_genome_filename: str,
     #      use_default: str
 
-    main(args.mutation, args.source, args.CNV, args.refgene, args.default)
+    main(args.mutation, args.source, args.CNV, args.refgene, args.snp, args.default)
     # main(sys.argv[1], sys.argv[2], sys.argv[3], sys.argv[4], sys.argv[5])

@@ -1,14 +1,13 @@
+from time import sleep
 from typing import Dict
 
 from choose_probe_target import parse_chromosome_position_range
 from temp import write_output
 
 
-def choose_probe_placement_CNV(
-        gene_mutation_type_info_dict: Dict[str, dict],
-        targeting_window_size: int = 80,
-        cumulative_contribution_threshold: int = 90,
-        recurrent_definition: int = 2, ):
+def divide_CNV_by_gene(
+        gene_mutation_type_info_dict: Dict[str, dict]):
+
     visualize_CNV_on_IGV(gene_mutation_type_info_dict)
 
     all_tumours_ids = []
@@ -23,7 +22,9 @@ def choose_probe_placement_CNV(
 
     input_list_CNV = []
     # already grouped by genes
-    for gene, info in gene_mutation_type_info_dict.items():
+    for gene_type, info in gene_mutation_type_info_dict.items():
+        gene_type_list = gene_type.split(';')
+        gene = gene_type_list[0]
 
         tumour_ids = info['id tumour']
         CNV_coordinates = info['CNV coordinates']
@@ -41,7 +42,7 @@ def choose_probe_placement_CNV(
     input_list_CNV.insert(0, ['gene', 'CNV coordinates', 'mutation type', 'unique tumours',
                               'number of unique tumours'])
 
-    write_output(input_list_CNV, 'input_gene_CNV_cosmic.xlsx')
+    return input_list_CNV
 
 
 def visualize_CNV_on_IGV(gene_mutation_type_info_dict):
@@ -73,3 +74,183 @@ def visualize_CNV_on_IGV(gene_mutation_type_info_dict):
         ])
 
     write_output(all_CNV_list, 'all CNV.xlsx')
+
+
+def choose_SNP_targets(CNV_genes, reference_genome_filename, needed_minor_allele_frequency,
+                       common_snp_filename):
+
+    gene_ranges_dict = {}
+
+    # map gene to transcription
+    gene_name_transcription_dict = {}
+    with open(reference_genome_filename) as hgnc_genes:
+        next(hgnc_genes)
+        for gene_transcript in hgnc_genes:
+
+            gene_transcript_info_list = gene_transcript.split('\t')
+            gene_name = gene_transcript_info_list[9].upper()
+            gene_location = gene_name_transcription_dict.get(gene_name)
+
+            chromosome = gene_transcript_info_list[0]
+            # is a scaffold
+            if len(chromosome) != 4 and len(chromosome) != 5:
+                continue
+
+            # if chromosome == 'chrY' or chromosome == 'chrX':
+            #     gene_name = gene_name + ',' + chromosome
+
+            # TODO
+            # there are 10 genes with the same name, on X and Y
+            # if we need both gene on both chromosome
+            # change gene name to gene name + chromosome for X and Y
+            # if we cannot find the gene when trying to use
+            # gene_name_transcription_dict, then we add chrX or chrY to it
+            # and search it again
+            # and separate out X or Y before adding it to position_gene_dict
+
+            transcription_start = gene_transcript_info_list[1]
+            transcription_end = gene_transcript_info_list[2]
+
+            gene_ranges_dict.setdefault(gene_name, []).append([transcription_start, transcription_end])
+
+            # if gene_location is not None:
+            #     earliest_transcription_start = gene_location[1]
+            #     earliest_transcription_start = min(earliest_transcription_start, transcription_start)
+            # else:
+            #     earliest_transcription_start = transcription_start
+            #
+            # if gene_location is not None:
+            #     latest_transcription_end = gene_location[2]
+            #     latest_transcription_end = max(latest_transcription_end, transcription_end)
+            # else:
+            #     latest_transcription_end = transcription_end
+            #
+            # gene_name_transcription_dict[gene_name] = [chromosome, earliest_transcription_start, latest_transcription_end]
+    print("mapped gene to transcription region")
+
+    num_overlap = 0
+    for gene, all_transcript_ranges, in gene_ranges_dict.items():
+        overlap_merged = merge_overlaps(all_transcript_ranges)
+        if len(overlap_merged) > 1:
+            print(gene, overlap_merged)
+            num_overlap += 1
+
+    print(len(gene_ranges_dict), num_overlap)
+    sleep(1000)
+
+    # map each position to gene
+    position_gene_dict = {}
+    # for each CNV gene, map each position of its transcription region to that gene
+    num_gene_not_in_file = 0
+    for CNV_gene_section in CNV_genes[1:]:
+
+        # TODO only do it for the top X genes (default 10)
+
+        gene_name = CNV_gene_section[0]
+        gene_transcription_region = gene_name_transcription_dict.get(gene_name)
+        if gene_transcription_region is None:
+            print(gene_name)
+            num_gene_not_in_file += 1
+            continue
+        gene_chromosome = gene_transcription_region[0]
+        gene_transcription_start = int(gene_transcription_region[1])
+        gene_transcription_end = int(gene_transcription_region[2])
+
+        transcription_region_list = list(range(gene_transcription_start, gene_transcription_end + 1))
+        for position in transcription_region_list:
+            position_gene_dict[gene_chromosome + ',' + str(position)] = gene_name
+
+
+    print(len(CNV_genes) - 1, num_gene_not_in_file)
+    print("mapped position to gene for all CNV genes")
+
+    # now we have all position that correspond to an CNV gene
+    # using position_gene_dict
+    # map each snp to a gene (gene to snps dict)
+    # i.e. collect each snp under a gene
+    gene_snps_dict = {}
+    with open(common_snp_filename) as snp_list:
+        next(snp_list)
+
+        for snp in snp_list:
+            snp_info_list = snp.split('\t')
+
+            snp_chromosome = snp_info_list[1]
+            start_position = snp_info_list[2]
+            snp_chromosome_start_position = snp_chromosome + ',' + start_position
+            print(snp_chromosome_start_position)
+
+            gene_name = position_gene_dict.get(snp_chromosome_start_position)
+            if gene_name is not None:
+                gene_snps_dict.setdefault(gene_name, []).append(snp)
+
+    print("mapped CNV gene to all its snp")
+
+    # now we have all snp of all CNV genes
+    # find all snp that are good (is around MAF)
+    for CNV_gene_section in CNV_genes[1:]:
+
+        gene_name = CNV_gene_section[0]
+        print(gene_name)
+        gene_transcription_region = gene_name_transcription_dict.get(gene_name)
+
+        if gene_transcription_region is None:
+            print(gene_name)
+        gene_chromosome = gene_transcription_region[0]
+        gene_transcription_start = gene_transcription_region[1]
+        gene_transcription_end = gene_transcription_region[2]
+
+        gene_all_snps = gene_snps_dict[gene_name]
+
+        gene_snp_list = []
+        for snp in gene_all_snps:
+            snp_info_list = snp.split('\t')
+            num_allele = int(snp_info_list[21])
+            if num_allele != 2:
+                continue
+
+            snp_chromosome = snp_info_list[1]
+            if gene_chromosome == snp_chromosome:
+                continue
+
+            start_position = snp_info_list[2]
+            end_position = snp_info_list[3]
+            if start_position < gene_transcription_start and end_position > gene_transcription_end:
+                freqs_allele = snp_info_list[24]
+                minor_allele_frequency = min(freqs_allele)
+
+                if needed_minor_allele_frequency - 1 <= float(minor_allele_frequency) <= needed_minor_allele_frequency + 1:
+                    snp_location = start_position + '-' + end_position
+                    gene_snp_list.append(snp_location)
+
+        CNV_gene_section.append(gene_snp_list)
+
+    print("kept only good snps")
+
+    write_output('CNV_genes', 'CNV_with_snps.xlsx')
+
+
+
+def merge_overlaps(exon_ranges):
+    # Sort the unique exon ranges by their starts
+    exon_ranges.sort()
+    overlap_merged = [exon_ranges[0]]
+    # insert first exon range into overlap_merged
+    # for every other exon
+    for exon_range in exon_ranges[1:]:
+
+        this_exon_start = exon_range[0]
+        overlap_merged_last_exon = overlap_merged[-1]
+        overlap_merged_last_exon_start = overlap_merged_last_exon[0]
+        overlap_merged_last_exon_end = overlap_merged_last_exon[-1]
+        # if exon ranges overlap (in other words, if this exon, starts
+        # in the middle of the last exon in overlap_merged)
+        if overlap_merged_last_exon_start <= this_exon_start <= overlap_merged_last_exon_end:
+            # then change the last exon's end to whichever one is bigger (
+            # last exon end or this exon end
+            overlap_merged[-1][-1] = max(overlap_merged[-1][-1], exon_range[-1])
+        # if this exon start after the last exon
+        else:
+            overlap_merged.append(exon_range)
+
+    return overlap_merged
