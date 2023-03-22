@@ -2,7 +2,7 @@ from time import sleep
 from typing import Dict
 
 from choose_probe_target import parse_chromosome_position_range
-from temp import write_output
+from others import write_output
 
 
 def divide_CNV_by_gene(

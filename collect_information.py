@@ -3,7 +3,7 @@ import re
 from typing import List, Dict, Tuple
 
 from choose_probe_target_CNV import divide_CNV_by_gene
-from temp import write_output
+from others import write_output
 
 
 def user_chose_options() -> Tuple[bool, int, int, int, int, bool, bool, int, int]:

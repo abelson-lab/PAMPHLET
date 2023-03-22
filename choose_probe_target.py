@@ -1,7 +1,7 @@
 import matplotlib.pyplot as plt
 from typing import Any, List, Dict, Set, Tuple, Union
 
-from temp import write_output
+from others import write_output
 
 """the only 0th level function in this file"""
 

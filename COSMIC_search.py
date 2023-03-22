@@ -9,7 +9,7 @@ from collect_information import define_important_columns, \
     user_chose_options
 # from temp import define_output_file_heading
 from cover_entire_gene import make_probe_these_gene
-from temp import \
+from others import \
     convert_dict_list, \
     find_num_gene_only_CNV, \
     integrate_CNV_point_mutation_info
@@ -42,11 +42,32 @@ def main(cosmic_mutation_filename: str, CNV_source: str, CNV_filename: str,
         make_probe_these_gene(reference_genome_filename)
 
 
+    # all processing relating to point mutations
+    important_column_heading_list, important_column_heading_list_CNV, important_column_number_list, important_column_number_list_CNV = define_important_columns()
+
+    chosen_set = read_file_choose_cancer(cosmic_mutation_filename, use_default, search_CNV=False)
+
+    gene_mutation_type_info_dict = {}
+    read_process_file_point_mutation(cosmic_mutation_filename,
+                                     gene_mutation_type_info_dict,
+                                     important_column_heading_list,
+                                     important_column_number_list, chosen_set,
+                                     remove_intronic_mutation)
+
+    choose_probe_placement_point(
+        gene_mutation_type_info_dict,
+        recurrent_definition=recurrent_definition,
+        targeting_window_size=targeting_window_size,
+        indel_filter_threshold=indel_filter_threshold,
+        cumulative_contribution_threshold=cumulative_contribution_threshold,
+        merge_others=merge_others)
+
+
     # # TODO this is where you add more genes, from other papers
     # l_chip_gene_set_1 = read_selected_genes(gene_list_file_name)
 
-    important_column_heading_list, important_column_heading_list_CNV, important_column_number_list, important_column_number_list_CNV = define_important_columns()
 
+    # all processing relating to CNV
     gene_mutation_type_info_dict_CNV = {}
 
     if CNV_source == 'cosmic':
@@ -69,25 +90,12 @@ def main(cosmic_mutation_filename: str, CNV_source: str, CNV_filename: str,
                        common_snp_filename)
 
 
-    chosen_set = read_file_choose_cancer(cosmic_mutation_filename, use_default, search_CNV=False)
-
-    gene_mutation_type_info_dict = {}
-    read_process_file_point_mutation(cosmic_mutation_filename,
-                                     gene_mutation_type_info_dict,
-                                     important_column_heading_list,
-                                     important_column_number_list, chosen_set,
-                                     remove_intronic_mutation)
-
-    choose_probe_placement_point(
-        gene_mutation_type_info_dict,
-        recurrent_definition=recurrent_definition,
-        targeting_window_size=targeting_window_size,
-        indel_filter_threshold=indel_filter_threshold,
-        cumulative_contribution_threshold=cumulative_contribution_threshold,
-        merge_others=merge_others)
 
 
 
+
+
+    # no longer used processing
     find_num_gene_only_CNV(gene_mutation_type_info_dict,
                            gene_mutation_type_info_dict_CNV)
 

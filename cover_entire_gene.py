@@ -1,4 +1,4 @@
-from temp import write_output
+from others import write_output
 
 
 def make_probe_these_gene(reference_genome_filename):
