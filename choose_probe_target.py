@@ -66,7 +66,7 @@ def chose_most_recurrent_mutation_then_probe_centered_at_mutation_center(
         gene_info_dict: Dict[str, dict], cumulative_contribution_threshold: int,
         targeting_window_size: int, indel_filter_threshold: int,
         recurrent_definition: int, merge_others: bool) -> Tuple[
-    List[Any], List[Any]]:
+            List[Any], List[Any]]:
     """
     This approach choose the most recurrent mutation based on number of
     tumour that has this mutation (the greater the number of tumour, the more

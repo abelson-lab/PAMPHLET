@@ -22,9 +22,7 @@ def divide_CNV_by_gene(
 
     input_list_CNV = []
     # already grouped by genes
-    for gene_type, info in gene_mutation_type_info_dict.items():
-        gene_type_list = gene_type.split(';')
-        gene = gene_type_list[0]
+    for gene, info in gene_mutation_type_info_dict.items():
 
         tumour_ids = info['id tumour']
         CNV_coordinates = info['CNV coordinates']
@@ -231,25 +229,25 @@ def choose_SNP_targets(CNV_genes, reference_genome_filename, needed_minor_allele
 
 
 
-def merge_overlaps(exon_ranges):
-    # Sort the unique exon ranges by their starts
-    exon_ranges.sort()
-    overlap_merged = [exon_ranges[0]]
-    # insert first exon range into overlap_merged
-    # for every other exon
-    for exon_range in exon_ranges[1:]:
+def merge_overlaps(transcription_ranges):
+    # Sort the unique transcript ranges by their starts
+    transcription_ranges.sort()
+    overlap_merged = [transcription_ranges[0]]
+    # insert first transcript range into overlap_merged
+    # for every other transcript
+    for exon_range in transcription_ranges[1:]:
 
         this_exon_start = exon_range[0]
         overlap_merged_last_exon = overlap_merged[-1]
         overlap_merged_last_exon_start = overlap_merged_last_exon[0]
         overlap_merged_last_exon_end = overlap_merged_last_exon[-1]
-        # if exon ranges overlap (in other words, if this exon, starts
-        # in the middle of the last exon in overlap_merged)
+        # if transcript ranges overlap (in other words, if this exon, starts
+        # in the middle of the last transcript in overlap_merged)
         if overlap_merged_last_exon_start <= this_exon_start <= overlap_merged_last_exon_end:
-            # then change the last exon's end to whichever one is bigger (
-            # last exon end or this exon end
+            # then change the last transcript's end to whichever one is bigger (
+            # last transcript end or this transcript end
             overlap_merged[-1][-1] = max(overlap_merged[-1][-1], exon_range[-1])
-        # if this exon start after the last exon
+        # if this transcript start after the last transcript
         else:
             overlap_merged.append(exon_range)
 

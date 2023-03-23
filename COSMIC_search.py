@@ -2,7 +2,7 @@
 import argparse
 
 from choose_probe_target import choose_probe_placement_point
-from choose_probe_target_CNV import choose_SNP_targets, divide_CNV_by_gene
+from choose_probe_target_CNV import choose_SNP_targets
 from collect_information import define_important_columns, \
     read_file_choose_cancer, \
     read_process_file_CNV_mutation_cbioportal, read_process_file_CNV_mutation_cosmic, read_process_file_point_mutation, \
