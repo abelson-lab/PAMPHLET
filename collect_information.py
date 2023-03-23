@@ -2,9 +2,6 @@ import csv
 import re
 from typing import List, Dict, Tuple
 
-from choose_probe_target_CNV import divide_CNV_by_gene
-from others import write_output_excel
-
 
 def user_chose_options() -> Tuple[bool, int, int, int, int, bool, bool, int, int]:
     """
@@ -358,7 +355,7 @@ def read_mutation_file(cosmic_mutation_file_name: str,
                 if remove_intronic_mutation:
                     filter_out_flag = filter_intronic_mutations(row[19])
                 if filter_out_flag or row[12] == 'NS' or row[
-                    21] == 'Substitution - coding silent':
+                        21] == 'Substitution - coding silent':
                     continue
 
                 # if '17:7675109' in row[25]:
@@ -488,7 +485,7 @@ def check_variant_type(mutation_cds: str):
                           mutation_cds) is None \
             and re.search(
         "c\\.(\\()?[0-9]+[+\\-]\\?(_[0-9]+[+\\-]\\?)?(\\))?[ACGTdi>?]",
-        mutation_cds) is None:
+            mutation_cds) is None:
         print(mutation_cds)
 
 
@@ -608,9 +605,6 @@ def read_process_file_CNV_mutation_cosmic(cosmic_CNV_file_name,
                   important_column_number_list_CNV, chosen_set)
     # and store in gene_mutation_type_info_dict_CNV
     calculate_CNV_frequency(gene_cell_mutation_type_info_dict_CNV)
-    CNV_genes = divide_CNV_by_gene(gene_cell_mutation_type_info_dict_CNV)
-
-    return CNV_genes
 
 
 def read_CNV_file(cosmic_CNV_file_name,

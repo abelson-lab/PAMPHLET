@@ -1,8 +1,11 @@
 from time import sleep
 from typing import Dict
+import matplotlib.pyplot as plt
 
 from choose_probe_target import parse_chromosome_position_range
 from others import write_output_excel
+
+
 
 
 def divide_CNV_by_gene(
@@ -72,6 +75,33 @@ def visualize_CNV_on_IGV(gene_mutation_type_info_dict):
         ])
 
     write_output_excel(all_CNV_list, 'all CNV.xlsx')
+
+
+def plot_CNV(CNV_genes):
+
+    # find all tumours
+    # skip the first row since it is the header
+    all_tumour = []
+    for row in CNV_genes[1:]:
+        gene_tumour = row[4]
+        all_tumour.extend(gene_tumour)
+
+    all_unique_tumour = list(set(all_tumour))
+    num_all_unique_tumour = len(all_unique_tumour)
+
+    selected_tumour = []
+    cover_sizes_percentage = [0]
+    for row in CNV_genes[1:]:
+        gene_tumour = row[4]
+        selected_tumour.append(gene_tumour)
+        cover_sizes_percentage.append(len(selected_tumour)/num_all_unique_tumour)
+
+
+    plt.plot(cover_sizes_percentage, linewidth=1)
+    plt.ylabel('percentage of tumour covered')
+    plt.xlabel('number of CNV target genes selected')
+    plt.title('coverage of tumours with increasing ranges in myeloid CNV')
+    plt.savefig('stop_at_90.pdf')
 
 
 def choose_SNP_targets(CNV_genes, reference_genome_filename, needed_minor_allele_frequency,
@@ -252,3 +282,5 @@ def merge_overlaps(transcription_ranges):
             overlap_merged.append(exon_range)
 
     return overlap_merged
+
+
