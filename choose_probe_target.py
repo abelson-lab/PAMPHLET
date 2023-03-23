@@ -43,7 +43,7 @@ def choose_probe_placement_point(
     for probe_range in mutation_list_IGV_format:
         probe_range[1] = str(int(probe_range[1]) - 1)
         probe_range[6] = str(int(probe_range[6]) - 1)
-    write_output_txt(mutation_list_IGV_format, 'range_IGV.xlsx')
+    write_output_txt(mutation_list_IGV_format, 'range_IGV.txt')
 
 
     mutation_list.insert(0, ['chromosome', 'first_mutation',

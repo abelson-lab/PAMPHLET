@@ -118,6 +118,10 @@ def read_file_choose_cancer(cosmic_mutation_file_name: str,
             for row in csv_reader:
                 # mutation file this is row 12, CNV its row 10
                 histology = row[histology_type_1_col_num]
+
+                # # for lymphoid CNV
+                # all_histology_subtype_one_set[histology] = ""
+
                 # if 'T_cell' in histology or 'anaplastic' in histology \
                 #         or 'lymphomatoid_papulosis' in histology \
                 #         or 'post_transplant_lymphoproliferative_disorder' in histology \
@@ -252,8 +256,7 @@ def read_selected_genes(gene_list_file_name):
 
 
 # TODO I can remove this, sort of, each columns is named actually,
-def define_important_columns() -> Tuple[
-        List[str], List[str], List[int], List[int]]:
+def define_important_columns() -> Tuple[List[str], List[int]]:
     """
     Cosmic mutation files are organized as a table, so when reading them,
     which columns are to be read needs to be known beforehand, since the columns
@@ -267,10 +270,23 @@ def define_important_columns() -> Tuple[
                                      'GRch', 'mutation genome position',
                                      'study id']
     important_column_number_list = [6, 13, 14, 19, 20, 21, 24, 25, 30]
+
+    return important_column_heading_list, important_column_number_list
+
+
+# TODO I can remove this, sort of, each columns is named actually,
+def define_important_columns_CNV() -> Tuple[List[str], List[int]]:
+    """
+    Cosmic mutation files are organized as a table, so when reading them,
+    which columns are to be read needs to be known beforehand, since the columns
+    themselves are not named.
+    Do note that if cosmic changes the order of columns, this function will break
+    """
+    # these two should match (i.e. the 6th column should be id tumour)
     important_column_heading_list_CNV = ['gene name', 'id tumour', 'mutation type',
                                          'CNV coordinates']
     important_column_number_list_CNV = [2, 4, 16, 19]
-    return important_column_heading_list, important_column_heading_list_CNV, important_column_number_list, important_column_number_list_CNV
+    return important_column_heading_list_CNV, important_column_number_list_CNV
 
 
 def read_process_file_point_mutation(cosmic_mutation_file_name: str,

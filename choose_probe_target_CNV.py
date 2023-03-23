@@ -83,7 +83,7 @@ def plot_CNV(CNV_genes):
     # skip the first row since it is the header
     all_tumour = []
     for row in CNV_genes[1:]:
-        gene_tumour = row[4]
+        gene_tumour = row[3]
         all_tumour.extend(gene_tumour)
 
     all_unique_tumour = list(set(all_tumour))
@@ -92,16 +92,21 @@ def plot_CNV(CNV_genes):
     selected_tumour = []
     cover_sizes_percentage = [0]
     for row in CNV_genes[1:]:
-        gene_tumour = row[4]
-        selected_tumour.append(gene_tumour)
-        cover_sizes_percentage.append(len(selected_tumour)/num_all_unique_tumour)
 
+        if cover_sizes_percentage[-1] > 0.9:
+            break
+        gene_tumour = row[3]
+        selected_tumour.extend(gene_tumour)
+        selected_tumour = list(set(selected_tumour))
+
+        print(len(selected_tumour), num_all_unique_tumour)
+        cover_sizes_percentage.append(len(selected_tumour)/num_all_unique_tumour)
 
     plt.plot(cover_sizes_percentage, linewidth=1)
     plt.ylabel('percentage of tumour covered')
     plt.xlabel('number of CNV target genes selected')
     plt.title('coverage of tumours with increasing ranges in myeloid CNV')
-    plt.savefig('stop_at_90.pdf')
+    plt.savefig('coverage.pdf')
 
 
 def choose_SNP_targets(CNV_genes, reference_genome_filename, needed_minor_allele_frequency,
