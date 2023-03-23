@@ -43,7 +43,7 @@ def choose_probe_placement_point(
     for probe_range in mutation_list_IGV_format:
         probe_range[1] = str(int(probe_range[1]) - 1)
         probe_range[6] = str(int(probe_range[6]) - 1)
-    write_output_txt(mutation_list_IGV_format, 'range_IGV.txt')
+    write_output_txt(mutation_list_IGV_format, 'range_IGV.bed')
 
 
     mutation_list.insert(0, ['chromosome', 'first_mutation',
@@ -182,8 +182,8 @@ def chose_most_recurrent_mutation_then_probe_centered_at_mutation_center(
     plt.plot(cover_sizes_percentage, linewidth=1)
     plt.ylabel('percentage of tumour covered')
     plt.xlabel('number of ' + str(targeting_window_size) + 'bp ranges selected')
-    plt.title('coverage of tumours with increasing probe in myeloid')
-    plt.savefig('stop_at_90.pdf')
+    plt.title('coverage of tumours with increasing probe in lymphoid')
+    plt.savefig('range coverage non-CNV.pdf')
 
     return mutation_list, indel_probe_list
 

@@ -43,7 +43,27 @@ def main(cosmic_mutation_filename: str, CNV_source: str, CNV_filename: str,
 
 
 
+    # all processing relating to point mutations
+    important_column_heading_list, important_column_number_list = define_important_columns()
 
+    chosen_set = read_file_choose_cancer(cosmic_mutation_filename, use_default, search_CNV=False)
+
+    gene_mutation_type_info_dict = {}
+    read_process_file_point_mutation(cosmic_mutation_filename,
+                                     gene_mutation_type_info_dict,
+                                     important_column_heading_list,
+                                     important_column_number_list, chosen_set,
+                                     remove_intronic_mutation)
+
+    choose_probe_placement_point(
+        gene_mutation_type_info_dict,
+        recurrent_definition=recurrent_definition,
+        targeting_window_size=targeting_window_size,
+        indel_filter_threshold=indel_filter_threshold,
+        cumulative_contribution_threshold=cumulative_contribution_threshold,
+        merge_others=merge_others)
+
+    
 
     # # TODO this is where you add more genes, from other papers
     # l_chip_gene_set_1 = read_selected_genes(gene_list_file_name)
@@ -79,25 +99,7 @@ def main(cosmic_mutation_filename: str, CNV_source: str, CNV_filename: str,
                        common_snp_filename)
 
 
-    # all processing relating to point mutations
-    important_column_heading_list, important_column_number_list = define_important_columns()
 
-    chosen_set = read_file_choose_cancer(cosmic_mutation_filename, use_default, search_CNV=False)
-
-    gene_mutation_type_info_dict = {}
-    read_process_file_point_mutation(cosmic_mutation_filename,
-                                     gene_mutation_type_info_dict,
-                                     important_column_heading_list,
-                                     important_column_number_list, chosen_set,
-                                     remove_intronic_mutation)
-
-    choose_probe_placement_point(
-        gene_mutation_type_info_dict,
-        recurrent_definition=recurrent_definition,
-        targeting_window_size=targeting_window_size,
-        indel_filter_threshold=indel_filter_threshold,
-        cumulative_contribution_threshold=cumulative_contribution_threshold,
-        merge_others=merge_others)
 
 
 

@@ -111,24 +111,24 @@ def read_file_choose_cancer(cosmic_mutation_file_name: str,
 
     if use_default:
         all_primary_tissue_set["haematopoietic_and_lymphoid_tissue"] = ""
-        all_primary_histology_set["haematopoietic_neoplasm"] = ""
-        # all_primary_histology_set["lymphoid_neoplasm"] = ""
+        # all_primary_histology_set["haematopoietic_neoplasm"] = ""
+        all_primary_histology_set["lymphoid_neoplasm"] = ""
         with open(cosmic_mutation_file_name) as mutation_file:
             csv_reader = csv.reader(mutation_file, delimiter=',')
             for row in csv_reader:
                 # mutation file this is row 12, CNV its row 10
                 histology = row[histology_type_1_col_num]
 
-                # # for lymphoid CNV
-                # all_histology_subtype_one_set[histology] = ""
+                # for lymphoid CNV
+                all_histology_subtype_one_set[histology] = ""
+                # if 'myelo' in histology:
+                #     all_histology_subtype_one_set[histology] = ""
 
                 # if 'T_cell' in histology or 'anaplastic' in histology \
                 #         or 'lymphomatoid_papulosis' in histology \
                 #         or 'post_transplant_lymphoproliferative_disorder' in histology \
                 #         or 'mycosis_fungoides-Sezary_syndrome' in histology:
                 #     all_histology_subtype_one_set[histology] = ""
-                if 'myelo' in histology:
-                    all_histology_subtype_one_set[histology] = ""
                 # if 'myeloid_neoplasm_unspecified_therapy_related' == histology:
                 #     all_histology_subtype_one_set[histology] = ""
 
