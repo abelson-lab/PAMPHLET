@@ -1,7 +1,9 @@
+import copy
+
 import matplotlib.pyplot as plt
 from typing import Any, List, Dict, Set, Tuple, Union
 
-from others import write_output
+from others import write_output_excel, write_output_txt
 
 """the only 0th level function in this file"""
 
@@ -36,14 +38,24 @@ def choose_probe_placement_point(
         targeting_window_size,
         indel_filter_threshold, recurrent_definition, merge_others)
 
-    mutation_list.insert(0, ['chromosome', 'first_mutation_in_probe',
-                             'last mutation in probe', 'gene name ',
+    mutation_list_IGV = copy.deepcopy(mutation_list)
+    mutation_list_IGV_format = [probe_range[0:9] for probe_range in mutation_list_IGV]
+    for probe_range in mutation_list_IGV_format:
+        probe_range[1] = str(int(probe_range[1]) - 1)
+        probe_range[6] = str(int(probe_range[6]) - 1)
+    write_output_txt(mutation_list_IGV_format, 'range_IGV.xlsx')
+
+
+    mutation_list.insert(0, ['chromosome', 'first_mutation',
+                             'last mutation', 'gene name and range number ',
                              'just 1', 'just plus', 'first mutation',
                              'last mutation', 'color code',
-                             'cumulative contribution', 'probe mutations',
-                             'tumours covered', 'num tumours'])
-    write_output(mutation_list, 'range.xlsx')
-    write_output(indel_probe_list, 'indels_ranges.xlsx')
+                             'cumulative contribution', 'range mutations',
+                             'tumours covered', 'number of tumours'])
+    indel_probe_list.insert(0, ['gene name and range number', 'chromosome',
+                                'first mutation', 'last mutation', 'range mutations'])
+    write_output_excel(mutation_list, 'range.xlsx')
+    write_output_excel(indel_probe_list, 'indels_ranges.xlsx')
 
 
 """1st level function"""
@@ -137,7 +149,7 @@ def chose_most_recurrent_mutation_then_probe_centered_at_mutation_center(
                           'size of tumour set', 'gene name'])
 
     # show data before choose ranges
-    write_output(input_list, 'input.xlsx')
+    write_output_excel(input_list, 'input.xlsx')
 
     tumour_set_list = []
     unique_tumour_id = []
@@ -169,8 +181,8 @@ def chose_most_recurrent_mutation_then_probe_centered_at_mutation_center(
 
     plt.plot(cover_sizes_percentage, linewidth=1)
     plt.ylabel('percentage of tumour covered')
-    plt.xlabel('number of ' + str(targeting_window_size) + 'bp probes selected')
-    plt.title('coverage of tumours with increasing probe ')
+    plt.xlabel('number of ' + str(targeting_window_size) + 'bp ranges selected')
+    plt.title('coverage of tumours with increasing probe in myeloid')
     plt.savefig('stop_at_90.pdf')
 
     return mutation_list, indel_probe_list
@@ -455,7 +467,11 @@ def find_probe_cover(all_position_tumour_dict: Dict[str, Set[str]],
         all_mutation_in_probe.sort()
         if capture_indels:
             indels_probe_list.append(
-                [position_most_tumour, list(set(all_mutation_in_probe))])
+                [gene_name + ' ' + str(num_probe),
+                 'chr' + chromosome,
+                 first_mutation_selected_position_and_probe,
+                 last_mutation_selected_position_and_probe,
+                 list(set(all_mutation_in_probe))])
 
         num_probe += 1
 

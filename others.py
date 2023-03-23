@@ -1,5 +1,6 @@
-import pandas as pd
+import csv
 
+import pandas as pd
 
 
 def find_num_gene_only_CNV(gene_cell_mutation_type_info_dict,
@@ -75,7 +76,7 @@ def find_genes_in_cosmic_and_paper_in_paper_not_in_cosmic(
 
     # the genes in 235, but not found on cosmic
     print('remaining', len(remaining_genes))
-    # write_output(remaining_genes, 'remaining_genes.xlsx')
+    # write_output_excel(remaining_genes, 'remaining_genes.xlsx')
 
 
 def define_output_file_heading():
@@ -111,7 +112,7 @@ def convert_dict_list(gene_cell_type_dict,
         specific_gene_dict = gene_dict.setdefault(gene, {})
         specific_gene_dict[mutation_type] = info
 
-    type_cell_mutation_list = ['point', 'CNV',]
+    type_cell_mutation_list = ['point', 'CNV', ]
     for gene, cell_type_info_dict in gene_dict.items():
         l_chip_sublist = [gene]
         # each cell_type_info is a dict
@@ -212,11 +213,17 @@ def process_healthy_genes_paper_genes(all_possible_l_chip_list,
             all_possible_l_chip_list[i].append('___')
 
 
-def write_output(gene_set, file_name):
+def write_output_excel(gene_set, file_name):
     df = pd.DataFrame(gene_set)
     writer = pd.ExcelWriter(file_name, engine='xlsxwriter')
     df.to_excel(writer, sheet_name='gene set', index=False)
     writer.save()
+
+
+def write_output_txt(gene_list, file_name):
+    with open(file_name, "w") as file:
+        writer = csv.writer(file, delimiter="\t")
+        writer.writerows(gene_list)
 
 
 """the rest are 3rd level or beyond"""

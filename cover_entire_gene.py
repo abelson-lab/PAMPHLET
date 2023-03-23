@@ -1,4 +1,4 @@
-from others import write_output
+from others import write_output_excel
 
 
 def make_probe_these_gene(reference_genome_filename):
@@ -124,4 +124,4 @@ def make_probe_these_gene(reference_genome_filename):
                 gene_name, chromosome, exon_range[0], exon_range[1]
             ])
 
-    write_output(range_list, 'range_entire_gene.xlsx')
+    write_output_excel(range_list, 'range_entire_gene.xlsx')

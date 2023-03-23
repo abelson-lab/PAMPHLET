@@ -3,7 +3,7 @@ import re
 from typing import List, Dict, Tuple
 
 from choose_probe_target_CNV import divide_CNV_by_gene
-from others import write_output
+from others import write_output_excel
 
 
 def user_chose_options() -> Tuple[bool, int, int, int, int, bool, bool, int, int]:
@@ -383,7 +383,7 @@ def read_mutation_file(cosmic_mutation_file_name: str,
             # counter += 1
             # print(str(counter*100/3544360) + '%')
 
-    # write_output(row_to_look_at, 'rows.xlsx')
+    # write_output_excel(row_to_look_at, 'rows.xlsx')
 
 
 def filter_intronic_mutations(mutation_CDS) -> bool:
@@ -639,7 +639,7 @@ def read_CNV_file(cosmic_CNV_file_name,
                 if row[10] == 'NS':
                     continue
 
-                dict_key_name = gene_name + ';' + 'CNV'
+                dict_key_name = gene_name
 
                 specific_gene_histology_dict_CNV = gene_cell_mutation_type_dict_CNV.setdefault(
                     dict_key_name, {})

@@ -2,7 +2,7 @@ from time import sleep
 from typing import Dict
 
 from choose_probe_target import parse_chromosome_position_range
-from others import write_output
+from others import write_output_excel
 
 
 def divide_CNV_by_gene(
@@ -73,7 +73,7 @@ def visualize_CNV_on_IGV(gene_mutation_type_info_dict):
             '21816532'
         ])
 
-    write_output(all_CNV_list, 'all CNV.xlsx')
+    write_output_excel(all_CNV_list, 'all CNV.xlsx')
 
 
 def choose_SNP_targets(CNV_genes, reference_genome_filename, needed_minor_allele_frequency,
@@ -227,7 +227,7 @@ def choose_SNP_targets(CNV_genes, reference_genome_filename, needed_minor_allele
 
     print("kept only good snps")
 
-    write_output('CNV_genes', 'CNV_with_snps.xlsx')
+    write_output_excel('CNV_genes', 'CNV_with_snps.xlsx')
 
 
 
