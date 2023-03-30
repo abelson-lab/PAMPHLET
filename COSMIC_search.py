@@ -2,7 +2,7 @@
 import argparse
 
 from choose_probe_target import choose_probe_placement_point
-from choose_probe_target_CNV import choose_SNP_targets, divide_CNV_by_gene, plot_CNV
+from choose_probe_target_CNV import choose_SNP_targets, divide_CNV_by_gene, plot_CNV, visualize_SNP_on_IGV
 from collect_information import define_important_columns, \
     define_important_columns_CNV, read_file_choose_cancer, \
     read_process_file_CNV_mutation_cbioportal, read_process_file_CNV_mutation_cosmic, read_process_file_point_mutation, \
@@ -27,13 +27,15 @@ def main(cosmic_mutation_filename: str, CNV_source: str, CNV_filename: str,
     cover_entire_gene = False
     informative_individual_percentage = 5
     num_probe_per_individual = 100
+    top_X_CNV_gene_to_be_targeted = 10
     if use_default == 'default':
         print("using default")
         use_default = True
     else:
         remove_intronic_mutation, recurrent_definition, targeting_window_size, indel_filter_threshold,\
         cumulative_contribution_threshold, merge_others, cover_entire_gene,\
-        informative_individual_percentage, num_probe_per_individual = user_chose_options()
+        informative_individual_percentage, num_probe_per_individual,\
+        top_X_CNV_gene_to_be_targeted = user_chose_options()
         use_default = False
 
     needed_minor_allele_frequency = informative_individual_percentage / num_probe_per_individual
@@ -78,8 +80,9 @@ def main(cosmic_mutation_filename: str, CNV_source: str, CNV_filename: str,
 
     write_output_excel(CNV_genes, 'CNV gene ranked.xlsx')
     choose_SNP_targets(CNV_genes, reference_genome_filename, needed_minor_allele_frequency,
-                       common_snp_filename)
+                       common_snp_filename, top_X_CNV_gene_to_be_targeted)
 
+    visualize_SNP_on_IGV(common_snp_filename)
 
 
     # all processing relating to point mutations

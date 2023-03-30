@@ -1,4 +1,4 @@
-from time import sleep
+
 from typing import Dict
 import matplotlib.pyplot as plt
 
@@ -109,7 +109,7 @@ def plot_CNV(CNV_genes):
 
 
 def choose_SNP_targets(CNV_genes, reference_genome_filename, needed_minor_allele_frequency,
-                       common_snp_filename):
+                       common_snp_filename, top_X_CNV_gene_to_be_targeted):
 
     gene_ranges_dict = {}
 
@@ -172,7 +172,7 @@ def choose_SNP_targets(CNV_genes, reference_genome_filename, needed_minor_allele
     position_gene_dict = {}
     # for each CNV gene, map each position of its transcription region to that gene
     num_gene_not_in_file = 0
-    for CNV_gene_section in CNV_genes[1:11]:
+    for CNV_gene_section in CNV_genes[1:top_X_CNV_gene_to_be_targeted + 1]:
 
         # TODO only do it for the top X genes (default 10)
         gene_name = CNV_gene_section[0]
@@ -222,13 +222,13 @@ def choose_SNP_targets(CNV_genes, reference_genome_filename, needed_minor_allele
 
     # now we have all snp of all CNV genes
     # find all snp that are good (is around MAF)
-    for CNV_gene_section in CNV_genes[1:11]:
+    for CNV_gene_section in CNV_genes[1:top_X_CNV_gene_to_be_targeted + 1]:
 
         # for each CNV gene, get its transcription region
         # to be later compare that the SNP is indeed within it
         # since before I only check that the starting position of the SNP
         # is a position of the transcription region
-        # and also check if the chromsome match
+        # and also check if the chromosome match
         gene_name = CNV_gene_section[0]
         print(gene_name)
         gene_transcription_region = gene_name_transcription_dict.get(gene_name)
@@ -290,7 +290,7 @@ def choose_SNP_targets(CNV_genes, reference_genome_filename, needed_minor_allele
 
     print("kept only good snps")
 
-    write_output_excel(CNV_genes[1:11], 'CNV_with_snps.xlsx')
+    write_output_excel(CNV_genes[1:top_X_CNV_gene_to_be_targeted + 1], 'CNV_with_snps.xlsx')
 
 
 
@@ -318,3 +318,6 @@ def merge_overlaps(transcription_ranges):
 
     return overlap_merged
 
+
+def visualize_SNP_on_IGV(common_snp_filename):
+    pass

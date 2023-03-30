@@ -3,7 +3,7 @@ import re
 from typing import List, Dict, Tuple
 
 
-def user_chose_options() -> Tuple[bool, int, int, int, int, bool, bool, int, int]:
+def user_chose_options() -> Tuple[bool, int, int, int, int, bool, bool, int, int, int]:
     """
     Ask the user to choose their options, from do they want to remove intronic mutation,
     what is their definition of recurrent mutation, targeting window size,
@@ -49,6 +49,11 @@ def user_chose_options() -> Tuple[bool, int, int, int, int, bool, bool, int, int
         "How many SNP sites do you want to target, that is the number of probe"
         "for each individual, default is 100")
 
+    top_X_CNV_gene_to_be_targeted = input(
+        "How many gene affected by CNV, do you want to target, start from the "
+        "CNV genes found in the most number of tumours, default is 10"
+    )
+
     if remove_intronic_mutation == "yes":
         remove_intronic_mutation = True
     else:
@@ -65,10 +70,12 @@ def user_chose_options() -> Tuple[bool, int, int, int, int, bool, bool, int, int
     cumulative_contribution_threshold = int(cumulative_contribution_threshold)
     informative_individual_percentage = int(informative_individual_percentage)
     num_probe_per_individual = int(num_probe_per_individual)
+    top_X_CNV_gene_to_be_targeted = int(top_X_CNV_gene_to_be_targeted)
 
     return remove_intronic_mutation, recurrent_definition, targeting_window_size, \
         indel_filter_threshold, cumulative_contribution_threshold, merge_other, \
-        cover_entire_gene, informative_individual_percentage, num_probe_per_individual
+        cover_entire_gene, informative_individual_percentage, num_probe_per_individual, \
+        top_X_CNV_gene_to_be_targeted
 
 
 """second level function"""
@@ -371,7 +378,7 @@ def read_mutation_file(cosmic_mutation_file_name: str,
                 if remove_intronic_mutation:
                     filter_out_flag = filter_intronic_mutations(row[19])
                 if filter_out_flag or row[12] == 'NS' or row[
-                        21] == 'Substitution - coding silent':
+                    21] == 'Substitution - coding silent':
                     continue
 
                 # if '17:7675109' in row[25]:
@@ -501,7 +508,7 @@ def check_variant_type(mutation_cds: str):
                           mutation_cds) is None \
             and re.search(
         "c\\.(\\()?[0-9]+[+\\-]\\?(_[0-9]+[+\\-]\\?)?(\\))?[ACGTdi>?]",
-            mutation_cds) is None:
+        mutation_cds) is None:
         print(mutation_cds)
 
 
