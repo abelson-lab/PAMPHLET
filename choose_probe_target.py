@@ -463,7 +463,9 @@ def find_probe_cover(all_position_tumour_dict: Dict[str, Set[str]],
             all_position_tumour_dict.pop(position_most_tumour)
 
         cover_sizes_percentage.append(cumulative_contribution)
-        print(cumulative_contribution, position_most_tumour)
+        print(cumulative_contribution, position_most_tumour,
+              first_mutation_selected_position_and_probe,
+              last_mutation_selected_position_and_probe)
 
         all_mutation_in_probe.sort()
         if capture_indels:
@@ -526,8 +528,6 @@ def get_probe_covered_tumours(all_position_tumour_dict: Dict[str, Set[str]],
     else:
         captures_indel = True
 
-    print("position most tumour", position_most_tumour, "num tumour", len(tumour_set_selected_position_and_probe))
-
     # TODO if not merging and the only mutation is a deletion or insertion
     #   It does not cover that
     #   if I turn insertion in a range instead (like deletions, then we can)
@@ -573,10 +573,6 @@ def get_probe_covered_tumours(all_position_tumour_dict: Dict[str, Set[str]],
         best_probe_tumour_dict[probe_start] = tumour_set_selected_position_and_probe
         best_probe_mutation_dict[probe_start] = all_mutation_in_probe
         best_probe_position_dict[probe_start] = all_position_in_probe
-
-        print('\t', probe_start, probe_end - 1,
-              len(tumour_set_selected_position_and_probe), num_indels)
-        print('\t\t', all_mutation_in_probe, '\n')
 
         probe_start += 1
         while probe_end < rightmost_probe_end - 1:
@@ -637,10 +633,6 @@ def get_probe_covered_tumours(all_position_tumour_dict: Dict[str, Set[str]],
             best_probe_mutation_dict[probe_start] = all_mutation_in_probe
             best_probe_position_dict[probe_start] = all_position_in_probe
 
-            print('\t', probe_start, probe_end,
-                  len(tumour_set_selected_position_and_probe), num_indels)
-            print('\t\t', all_mutation_in_probe, '\n')
-
             probe_start += 1
             probe_end += 1
 
@@ -653,7 +645,6 @@ def get_probe_covered_tumours(all_position_tumour_dict: Dict[str, Set[str]],
             if len(tumour_set) > best_range_tumour_set_size:
                 best_range_start = probe_start
                 best_range_tumour_set_size = len(tumour_set)
-        print(best_range_start)
         best_probe_tumour_set = best_probe_tumour_dict.get(best_range_start)
         best_probe_mutation = best_probe_mutation_dict.get(best_range_start)
         best_probe_position = best_probe_position_dict.get(best_range_start)
@@ -679,11 +670,6 @@ def get_probe_covered_tumours(all_position_tumour_dict: Dict[str, Set[str]],
         all_mutation_in_probe = best_probe_mutation
         tumour_set_selected_position_and_probe = best_probe_tumour_set
         captures_indel = bool(best_probe_num_indel)
-
-        print('best outer range', best_range_start,
-              best_range_start + targeting_window_size)
-        print("best range", first_mutation_selected_position_and_probe,
-              last_mutation_selected_position_and_probe)
 
     return first_mutation_selected_position_and_probe, last_mutation_selected_position_and_probe, \
         tumour_set_selected_position_and_probe, chromosome, all_mutation_in_probe, captures_indel
