@@ -54,6 +54,8 @@ def main(cosmic_mutation_filename: str, CNV_source: str, CNV_filename: str,
 
 
     # all processing relating to CNV
+    # visualize_SNP_on_IGV(common_snp_filename)
+
     important_column_heading_list_CNV, important_column_number_list_CNV = define_important_columns_CNV()
 
     gene_mutation_type_info_dict_CNV = {}
@@ -82,7 +84,7 @@ def main(cosmic_mutation_filename: str, CNV_source: str, CNV_filename: str,
     choose_SNP_targets(CNV_genes, reference_genome_filename, needed_minor_allele_frequency,
                        common_snp_filename, top_X_CNV_gene_to_be_targeted)
 
-    visualize_SNP_on_IGV(common_snp_filename)
+
 
 
     # all processing relating to point mutations

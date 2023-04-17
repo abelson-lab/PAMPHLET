@@ -3,9 +3,7 @@ from typing import Dict
 import matplotlib.pyplot as plt
 
 from choose_probe_target import parse_chromosome_position_range
-from others import write_output_excel
-
-
+from others import write_output_excel, write_output_txt
 
 
 def divide_CNV_by_gene(
@@ -220,6 +218,8 @@ def choose_SNP_targets(CNV_genes, reference_genome_filename, needed_minor_allele
 
     print("mapped all snp gene to a CNV gene")
 
+    snp_list_igv_format_after = []
+
     # now we have all snp of all CNV genes
     # find all snp that are good (is around MAF)
     for CNV_gene_section in CNV_genes[1:top_X_CNV_gene_to_be_targeted + 1]:
@@ -267,28 +267,36 @@ def choose_SNP_targets(CNV_genes, reference_genome_filename, needed_minor_allele
             # check if snp is in transcription region
             start_position = snp_info_list[2]
             end_position = snp_info_list[3]
-            print(" trans start, start, end, trans end", gene_transcription_start, start_position, end_position, gene_transcription_end)
             assert start_position <= end_position
             if gene_transcription_start <= start_position and end_position <= gene_transcription_end:
-                print('in region')
 
                 # then check if is match our needed MAF
                 freqs_allele = snp_info_list[24]
-                print(freqs_allele)
                 minor_allele_frequency = float(min(freqs_allele.strip(',').split(',')))
-                print(minor_allele_frequency)
-                print('target, actual', needed_minor_allele_frequency, minor_allele_frequency)
-                if needed_minor_allele_frequency - 1 <= float(minor_allele_frequency) <= needed_minor_allele_frequency + 1:
+                print(needed_minor_allele_frequency)
+                if needed_minor_allele_frequency - 0.01 <= float(minor_allele_frequency) <= needed_minor_allele_frequency + 0.01:
                     snp_location = gene_chromosome + ':' + start_position + '-' + end_position
                     gene_snp_list.append(snp_location)
 
-        print(gene_snp_list)
+                    snp_list_igv_format_after.append([
+                        snp_chromosome,
+                        start_position,
+                        end_position,
+                        minor_allele_frequency,
+                        '1',
+                        '+',
+                        start_position,
+                        end_position,
+                        '21816532'
+                    ])
 
         # gather all good snp location, then append to the CNV list
         CNV_gene_section.append(gene_snp_list)
         CNV_gene_section.append(len(gene_snp_list))
 
     print("kept only good snps")
+
+    write_output_txt(snp_list_igv_format_after, 'snp_IGV_after.bed')
 
     write_output_excel(CNV_genes[1:top_X_CNV_gene_to_be_targeted + 1], 'CNV_with_snps.xlsx')
 
@@ -320,4 +328,51 @@ def merge_overlaps(transcription_ranges):
 
 
 def visualize_SNP_on_IGV(common_snp_filename):
-    pass
+    snp_list_igv_format = []
+
+
+    with open(common_snp_filename) as snp_list:
+        next(snp_list)
+
+        num = 0
+        for snp in snp_list:
+            snp_info_list = snp.split('\t')
+
+            snp_chromosome = snp_info_list[1]
+            start_position = snp_info_list[2]
+            end_position = snp_info_list[3]
+            freqs_allele = snp_info_list[24]
+
+            minor_allele_frequency = float(min(freqs_allele.strip(',').split(',')))
+
+            # 50,700,000
+            # 50,900,000
+
+            # skip if it is not 2 allele
+            num_allele = int(snp_info_list[21])
+            if num_allele != 2:
+                continue
+
+            # skip if it is not a single nucleotide polymorphism
+            allele_class = snp_info_list[11]
+            if allele_class != 'single':
+                continue
+
+            if '50700000' <= start_position and end_position <= '50900000':
+
+                snp_list_igv_format.append([
+                    snp_chromosome,
+                    start_position,
+                    end_position,
+                    minor_allele_frequency,
+                    '1',
+                    '+',
+                    start_position,
+                    end_position,
+                    '21816532'
+                ])
+
+            num += 1
+            print(num, num/13347306)
+
+    write_output_txt(snp_list_igv_format, 'snp_IGV_before.bed')

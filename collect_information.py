@@ -378,7 +378,7 @@ def read_mutation_file(cosmic_mutation_file_name: str,
                 if remove_intronic_mutation:
                     filter_out_flag = filter_intronic_mutations(row[19])
                 if filter_out_flag or row[12] == 'NS' or row[
-                    21] == 'Substitution - coding silent':
+                        21] == 'Substitution - coding silent':
                     continue
 
                 # if '17:7675109' in row[25]:
