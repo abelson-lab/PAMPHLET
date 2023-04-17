@@ -3,7 +3,31 @@ import re
 from typing import List, Dict, Tuple
 
 
-def user_chose_options() -> Tuple[bool, int, int, int, int, bool, bool, int, int, int]:
+def user_chose_options_CNV() -> Tuple[int, int, int]:
+    informative_individual_percentage = input(
+        "Where 1 means 100%, What is the percentage of individuals with an informative output, meaning"
+        " having the heterozygous minor allele in all the targeted SNP sites, a number greater than"
+        " 1, for example 5, means that all individuals is expected to have on"
+        " average 5 sites with informative output, default is 5")
+
+    num_probe_per_individual = input(
+        "How many SNP sites do you want to target, that is the number of probe"
+        "for each individual, default is 100")
+
+    top_X_CNV_gene_to_be_targeted = input(
+        "How many gene affected by CNV, do you want to target, start from the "
+        "CNV genes found in the most number of tumours, default is 10"
+    )
+
+    informative_individual_percentage = int(informative_individual_percentage)
+    num_probe_per_individual = int(num_probe_per_individual)
+    top_X_CNV_gene_to_be_targeted = int(top_X_CNV_gene_to_be_targeted)
+
+    return informative_individual_percentage, num_probe_per_individual, \
+           top_X_CNV_gene_to_be_targeted
+
+
+def user_chose_options() -> Tuple[bool, int, int, int, int, bool, bool]:
     """
     Ask the user to choose their options, from do they want to remove intronic mutation,
     what is their definition of recurrent mutation, targeting window size,
@@ -39,21 +63,6 @@ def user_chose_options() -> Tuple[bool, int, int, int, int, bool, bool, int, int
         "default is no,"
     )
 
-    informative_individual_percentage = input(
-        "Where 1 means 100%, What is the percentage of individuals with an informative output, meaning"
-        " having the heterozygous minor allele in all the targeted SNP sites, a number greater than"
-        " 1, for example 5, means that all individuals is expected to have on"
-        " average 5 sites with informative output, default is 5")
-
-    num_probe_per_individual = input(
-        "How many SNP sites do you want to target, that is the number of probe"
-        "for each individual, default is 100")
-
-    top_X_CNV_gene_to_be_targeted = input(
-        "How many gene affected by CNV, do you want to target, start from the "
-        "CNV genes found in the most number of tumours, default is 10"
-    )
-
     if remove_intronic_mutation == "yes":
         remove_intronic_mutation = True
     else:
@@ -68,14 +77,10 @@ def user_chose_options() -> Tuple[bool, int, int, int, int, bool, bool, int, int
     targeting_window_size = int(targeting_window_size)
     indel_filter_threshold = int(indel_filter_threshold)
     cumulative_contribution_threshold = int(cumulative_contribution_threshold)
-    informative_individual_percentage = int(informative_individual_percentage)
-    num_probe_per_individual = int(num_probe_per_individual)
-    top_X_CNV_gene_to_be_targeted = int(top_X_CNV_gene_to_be_targeted)
 
     return remove_intronic_mutation, recurrent_definition, targeting_window_size, \
-        indel_filter_threshold, cumulative_contribution_threshold, merge_other, \
-        cover_entire_gene, informative_individual_percentage, num_probe_per_individual, \
-        top_X_CNV_gene_to_be_targeted
+           indel_filter_threshold, cumulative_contribution_threshold, merge_other, \
+           cover_entire_gene
 
 
 """second level function"""
@@ -91,14 +96,15 @@ def get_bool(prompt: str) -> bool:
 
 
 def read_file_choose_cancer(cosmic_mutation_file_name: str,
-                            use_default: bool, search_CNV: bool) -> List[List[str]]:
+                            use_default: bool, default_which: str, search_CNV: bool, ) -> List[List[str]]:
     """
     Reads the cosmic file, then ask the user to choose the primary tissue,
     the primary histology, and the histology subtype one they want to target
+    :param default_which: either choose lymphoid cancer or myeloid cancers
     :param search_CNV: whether we are searching in the CNV file or not
     :param cosmic_mutation_file_name: The file name of the cosmic mutation file,
     it is under COSMIC Mutation on the cosmic website
-    :param use_default: chose t-cell cancers
+    :param use_default: chose default cancers
     :return: A list of cancers that the user have chosen
     """
     all_primary_tissue_set = {}
@@ -118,18 +124,22 @@ def read_file_choose_cancer(cosmic_mutation_file_name: str,
 
     if use_default:
         all_primary_tissue_set["haematopoietic_and_lymphoid_tissue"] = ""
-        # all_primary_histology_set["haematopoietic_neoplasm"] = ""
-        all_primary_histology_set["lymphoid_neoplasm"] = ""
+        if default_which == 'l':
+            all_primary_histology_set["lymphoid_neoplasm"] = ""
+        elif default_which == 'm':
+            all_primary_histology_set["haematopoietic_neoplasm"] = ""
+
         with open(cosmic_mutation_file_name) as mutation_file:
             csv_reader = csv.reader(mutation_file, delimiter=',')
             for row in csv_reader:
                 # mutation file this is row 12, CNV its row 10
                 histology = row[histology_type_1_col_num]
 
-                # for lymphoid CNV
-                all_histology_subtype_one_set[histology] = ""
-                # if 'myelo' in histology:
-                #     all_histology_subtype_one_set[histology] = ""
+                if default_which == 'l':
+                    all_histology_subtype_one_set[histology] = ""
+                elif default_which == 'm':
+                    if 'myelo' in histology:
+                        all_histology_subtype_one_set[histology] = ""
 
                 # if 'T_cell' in histology or 'anaplastic' in histology \
                 #         or 'lymphomatoid_papulosis' in histology \
@@ -378,7 +388,7 @@ def read_mutation_file(cosmic_mutation_file_name: str,
                 if remove_intronic_mutation:
                     filter_out_flag = filter_intronic_mutations(row[19])
                 if filter_out_flag or row[12] == 'NS' or row[
-                        21] == 'Substitution - coding silent':
+                    21] == 'Substitution - coding silent':
                     continue
 
                 # if '17:7675109' in row[25]:
