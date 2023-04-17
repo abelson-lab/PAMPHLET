@@ -166,24 +166,29 @@ if __name__ == "__main__":
 
     parser = argparse.ArgumentParser()
 
+    parser.add_argument('-t', '--type', help='type of mutation you want to target (sub_indel or CNV)',
+                        type=str, required=False, choices=['sub_indel', 'CNV', 'both'])
     parser.add_argument('-m', '--mutation', help='Path to cosmic mutation file',
-                        type=str, required=True)
+                        type=str, required=False)
     parser.add_argument('-c', '--CNV', help='Path to cosmic or cbioportal CNV file name',
-                        type=str, required=True)
+                        type=str, required=False)
     parser.add_argument('-s', '--source', help='Is CNV from cosmic or cbioportal',
-                        type=str, required=True, choices=['cosmic', 'cbioportal'])
+                        type=str, required=False, choices=['cosmic', 'cbioportal'])
     parser.add_argument('-r', '--refgene', help='Path to UCSC gene tracks file',
-                        type=str, required=True)
+                        type=str, required=False)
     parser.add_argument('-p', '--snp', help='Path to snp file name',
-                        type=str, required=True)
+                        type=str, required=False)
     parser.add_argument('-d', '--default', help='For development purposes, do not use',
                         type=str, default='no', required=False)
-    parser.add_argument('-a', '--defaultcancer', help='For development purposes, do not use',
+    parser.add_argument('-a', '--default_cancer', help='For development purposes, do not use',
                         type=str, default='m', required=False, choices=['m', 'l'])
     args = parser.parse_args()
 
-    # cosmic_mutation_filename: str, CNV_filename: str, reference_genome_filename: str,
-    #      use_default: str
 
-    main(args.mutation, args.source, args.CNV, args.refgene, args.snp, args.default, args.defaultcancer)
-    # main(sys.argv[1], sys.argv[2], sys.argv[3], sys.argv[4], sys.argv[5])
+    if args.type == 'sub_indel':
+        mutation_main(args.mutation, args.refgene, args.default, args.default_cancer)
+    elif args.type == 'CNV':
+        CNV_main(args.source, args.CNV, args.refgene, args.snp, args.default, args.default_cancer)
+    elif args.type == 'both':
+        mutation_main(args.mutation, args.refgene, args.default, args.default_cancer)
+        CNV_main(args.source, args.CNV, args.refgene, args.snp, args.default, args.default_cancer)
