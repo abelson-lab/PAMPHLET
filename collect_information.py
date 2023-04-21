@@ -3,7 +3,7 @@ import re
 from typing import List, Dict, Tuple
 
 
-def user_chose_options_CNV() -> Tuple[int, int, int]:
+def user_chose_options_CNV() -> Tuple[int, int, int, int]:
     informative_individual_percentage = input(
         "Where 1 means 100%, What is the percentage of individuals with an informative output, meaning"
         " having the heterozygous minor allele in all the targeted SNP sites, a number greater than"
@@ -19,12 +19,18 @@ def user_chose_options_CNV() -> Tuple[int, int, int]:
         "CNV genes found in the most number of tumours, default is 10"
     )
 
+    targeting_window_size = input(
+        "What is your window size, or the number"
+        " of base pairs that can be effectively"
+        " targeted, default is 80bp ")
+
     informative_individual_percentage = int(informative_individual_percentage)
     num_probe_per_individual = int(num_probe_per_individual)
     top_X_CNV_gene_to_be_targeted = int(top_X_CNV_gene_to_be_targeted)
+    targeting_window_size = int(targeting_window_size)
 
     return informative_individual_percentage, num_probe_per_individual, \
-           top_X_CNV_gene_to_be_targeted
+        top_X_CNV_gene_to_be_targeted, targeting_window_size
 
 
 def user_chose_options() -> Tuple[bool, int, int, int, int, bool, bool]:
@@ -96,7 +102,7 @@ def get_bool(prompt: str) -> bool:
 
 
 def read_file_choose_cancer(cosmic_mutation_file_name: str,
-                            use_default: bool, default_which: str, search_CNV: bool, ) -> List[List[str]]:
+                            use_default: bool, default_which: str, search_CNV: bool) -> List[List[str]]:
     """
     Reads the cosmic file, then ask the user to choose the primary tissue,
     the primary histology, and the histology subtype one they want to target
@@ -397,7 +403,7 @@ def read_mutation_file(cosmic_mutation_file_name: str,
                 # if we need to only target t-cell
                 # user would input when asked what histology subtype 1 do you want
                 #   dict_key_name should just be
-                dict_key_name = gene_name + ';' + 'point'
+                dict_key_name = gene_name
 
                 specific_gene_dict = gene_mutation_type_dict.setdefault(
                     dict_key_name, {})
@@ -523,6 +529,11 @@ def check_variant_type(mutation_cds: str):
 
 
 def calculate_mutation_frequency(gene_mutation_type_info_dict):
+    """
+    this calculates the mutation frequency of each genes, not used currently
+    :param gene_mutation_type_info_dict:
+    :return:
+    """
     all_tumour = []
     for gene_mutation_type, info in gene_mutation_type_info_dict.items():
         all_tumour.extend(info['id tumour'])

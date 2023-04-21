@@ -46,12 +46,12 @@ def choose_probe_placement_point(
     write_output_txt(mutation_list_IGV_format, 'range_IGV.bed')
 
     mutation_list.insert(0, ['chromosome', 'first_mutation',
-                             'last mutation', 'gene name and range number ',
+                             'last mutation', 'range name ',
                              'just 1', 'just plus', 'first mutation',
                              'last mutation', 'color code',
                              'cumulative contribution', 'range mutations',
                              'tumours covered', 'number of tumours'])
-    indel_probe_list.insert(0, ['gene name and range number', 'chromosome',
+    indel_probe_list.insert(0, ['range name', 'chromosome',
                                 'first mutation', 'last mutation', 'range mutations'])
     write_output_excel(mutation_list, 'range.xlsx')
     write_output_excel(indel_probe_list, 'indels_ranges.xlsx')
@@ -177,6 +177,7 @@ def chose_most_recurrent_mutation_then_probe_centered_at_mutation_center(
     # final_mutation_list = []
     # centralize_each_probe(center_probe_dict, final_mutation_list, mutation_list,
     #                       recurrent_definition, targeting_window_size)
+
 
     plt.plot(cover_sizes_percentage, linewidth=1)
     plt.ylabel('percentage of tumour covered')

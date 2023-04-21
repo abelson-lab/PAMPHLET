@@ -8,10 +8,7 @@ from collect_information import define_important_columns, \
     user_chose_options, user_chose_options_CNV
 # from temp import define_output_file_heading
 from cover_entire_gene import make_probe_these_gene
-from others import \
-    convert_dict_list, \
-    find_num_gene_only_CNV, \
-    integrate_CNV_point_mutation_info, write_output_excel
+from others import write_output_excel
 
 
 def mutation_main(cosmic_mutation_filename: str, reference_genome_filename: str,
@@ -98,16 +95,17 @@ def CNV_main(CNV_source: str, CNV_filename: str, reference_genome_filename: str,
 
     top_X_CNV_gene_to_be_targeted = 10
     informative_individual_percentage = 5
-    num_probe_per_individual = 100
+    num_probe_per_gene_individual = 100
+    targeting_window_size = 80
 
     if use_default == 'default':
         print("using default")
         use_default = True
     else:
-        informative_individual_percentage, num_probe_per_individual, \
-        top_X_CNV_gene_to_be_targeted = user_chose_options_CNV()
+        informative_individual_percentage, num_probe_per_gene_individual, \
+        top_X_CNV_gene_to_be_targeted, targeting_window_size = user_chose_options_CNV()
 
-    needed_minor_allele_frequency = informative_individual_percentage / num_probe_per_individual
+    needed_minor_allele_frequency = informative_individual_percentage / num_probe_per_gene_individual
 
     # visualize_SNP_on_IGV(common_snp_filename)
 
@@ -137,7 +135,8 @@ def CNV_main(CNV_source: str, CNV_filename: str, reference_genome_filename: str,
 
     write_output_excel(CNV_genes, 'CNV gene ranked.xlsx')
     choose_SNP_targets(CNV_genes, reference_genome_filename, needed_minor_allele_frequency,
-                       common_snp_filename, top_X_CNV_gene_to_be_targeted)
+                       common_snp_filename, top_X_CNV_gene_to_be_targeted, targeting_window_size,
+                       num_probe_per_gene_individual)
 
 
 # def convert_to_tsv():
