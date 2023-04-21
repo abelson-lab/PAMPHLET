@@ -173,5 +173,3 @@ python3 PAMPHLET.py -t CNV -s cbioportal -c <cbioportal CNV file name> -r <refse
 python3 PAMPHLET.py -t CNV -s cosmic -c <cosmic CNV file name>  -r <refseq gene filename> -p <common snp filename>
 ```
 
-(if user is using their own gene list for CNV)
-
