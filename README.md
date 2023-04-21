@@ -65,7 +65,8 @@ entries that share the same genomic location and counts the number of tumours in
 Fourth, it ranks each unique mutation by the number of tumours the mutations are reported in, with a decreasing order.
 At this point, PAMPHLET produces a table ranking the mutations by the number of tumours, where the most recurrent
 mutation is at the top, along with their locations, amino acid changes, corresponding tumour sets, and corresponding
-genes. (figure 1)
+genes. See the intermediate output below.
+![img.png](./new intermediate output.png)
 
 In the fifth step, PAMPHLET begins with the most recurrent unique mutation. It searches for nearby unique mutations to
 find the optimal range based on the sum of all mutation recurrences in the ranges. Nearby unique mutation means that
