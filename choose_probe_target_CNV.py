@@ -1,4 +1,4 @@
-
+from time import sleep
 from typing import Dict
 import matplotlib.pyplot as plt
 
@@ -356,7 +356,6 @@ def find_all_good_snps(CNV_genes, all_snp_per_gene, gene_name_transcription_dict
 
 def range_placement_snp(CNV_genes, gene_name_transcription_dict, num_probe_per_gene_individual, snp_existence_dict,
                         targeting_window_size, top_X_CNV_gene_to_be_targeted, gene_snp_range_list):
-    print(len(snp_existence_dict))
 
     # for each CNV, optimize probe placement
     for CNV_gene_section in CNV_genes[1:top_X_CNV_gene_to_be_targeted + 1]:
@@ -372,6 +371,7 @@ def range_placement_snp(CNV_genes, gene_name_transcription_dict, num_probe_per_g
                     print(gene_name)
                     continue
 
+        gene_chromosome = gene_transcription_region[0]
         gene_transcription_start = int(gene_transcription_region[1])
         gene_transcription_end = int(gene_transcription_region[2])
 
@@ -381,64 +381,119 @@ def range_placement_snp(CNV_genes, gene_name_transcription_dict, num_probe_per_g
         # first range
 
         best_snp_range_list = []
-        snp_range_dict = {}
+        snp_range_num_snp_dict = {} # maps range start of the num of snp of that range
         initial_range_num_snps = 0
+        range_snp_locations_dict = {}
         for i in range(range_start, range_end):
             if str(i) in snp_existence_dict:
                 initial_range_num_snps += 1
-        best_snp_range_list.append([range_start, initial_range_num_snps])
-        snp_range_dict[range_start] = initial_range_num_snps
+                range_snp_locations_dict[i] = ''
 
-        print(range_start, initial_range_num_snps)
+        # convert it to a list
+        range_snp_locations_list = []
+        for item, value in range_snp_locations_dict.items():
+            range_snp_locations_list.append(item)
+
+        best_snp_range_list.append([range_start, initial_range_num_snps, range_snp_locations_list])
+        snp_range_num_snp_dict[range_start] = initial_range_num_snps
 
         while range_end != gene_transcription_end:
-            previous_range_num_snps = snp_range_dict[range_start]
+            previous_range_num_snps = snp_range_num_snp_dict[range_start]
             range_start += 1
             range_end += 1
 
             # if the newest addition into the range, has a snp, add one
             if str(range_end) in snp_existence_dict:
                 previous_range_num_snps += 1
+                range_snp_locations_dict[range_end] = ''
             # if the latest subtraction has a snp, minus one
             if str(range_start - 1) in snp_existence_dict:
                 previous_range_num_snps -= 1
+                assert range_start - 1 in range_snp_locations_dict
+                range_snp_locations_dict.pop(range_start - 1, None)
 
             current_range_num_snps = previous_range_num_snps
+            snp_range_num_snp_dict[range_start] = current_range_num_snps
 
-            snp_range_dict[range_start] = current_range_num_snps
-            best_snp_range_list.append([range_start, current_range_num_snps])
+            # convert it to a list
+            range_snp_locations_list = []
+            for item, value in range_snp_locations_dict.items():
+                range_snp_locations_list.append(item)
+
+            best_snp_range_list.append([range_start, current_range_num_snps, range_snp_locations_list])
 
 
         # sort it
-        best_snp_range_list.sort(key=lambda x: x[1])
-
-        print(best_snp_range_list)
+        best_snp_range_list.sort(key=lambda x: x[1], reverse=True)
 
         num_probe_used = 0
         selected_ranges = []
         overlapping_ranges = {}
+        selected_ranges_snp = []
+        best_snp_range_list_index = 0
         # while it has not used all the assigned probes
         while num_probe_used < num_probe_per_gene_individual:
+            snp_range_start_num_snps = best_snp_range_list[best_snp_range_list_index]
             # start with the best range (that cover the most snps)
-            for snp_range_start_num_snps in best_snp_range_list:
-                snp_range_start = snp_range_start_num_snps[0]
-                num_snps = snp_range_start_num_snps[1]
-                # if this does not cover any snp, continue
-                if num_snps <= 0:
-                    break
-                # if this range overlap with another is already selected,
-                if snp_range_start in overlapping_ranges:
-                    continue
-                # if not, add it to here
-                selected_ranges.append(snp_range_start)
+            snp_range_start = snp_range_start_num_snps[0]
+            num_snps = snp_range_start_num_snps[1]
+            range_snp_location = snp_range_start_num_snps[2]
 
-                # add new overlapping ranges
-                for i in range(snp_range_start - 80, snp_range_start + 80):
-                    overlapping_ranges[snp_range_start] = ''
+            # if this does not cover any snp, continue
+            if num_snps <= 0:
+                break
+            # if this range overlap with another is already selected,
+            # next index, and continue
+            if snp_range_start in overlapping_ranges:
+                best_snp_range_list_index += 1
+                continue
+            # if not, select it
+            selected_ranges.append(snp_range_start)
+            # location of the snp in the selected ranges
+            selected_ranges_snp.append(range_snp_location)
 
+            # remove new overlapping ranges
+            for i in range(snp_range_start - 80, snp_range_start + 80):
+                overlapping_ranges[i] = ''
+
+            # go to next one
+            best_snp_range_list_index += 1
             num_probe_used += 1
 
-        gene_snp_range_list.append([gene_name, selected_ranges])
+        # if we have probes left, add them
+        read_coverage_ranges = []
+        if num_probe_per_gene_individual - num_probe_used > 0:
+            gene_transcription_region_length = gene_transcription_end - gene_transcription_start
+            num_bases_between_cov_ranges = gene_transcription_region_length // num_probe_per_gene_individual
+
+            selected_ranges.sort()
+            # based on the selected_range that targets snp, calculate what is
+            #   the nearest cov range
+            # range_start ~ gene_transcription_start + num_bases_between_cov_ranges * w
+            # w is a whole number
+            # solving this 'equation' (i.e. treating the approximate sign as an
+            # equal sign, then rounding) will get us the nearest w
+            all_nearest_read_coverage_range_to_snp_targeting_ranges = {}
+            for range_start in selected_ranges:
+                w = (range_start - gene_transcription_start) // num_bases_between_cov_ranges
+                all_nearest_read_coverage_range_to_snp_targeting_ranges[w] = ''
+
+            for i in range(num_probe_per_gene_individual):
+                # do not add one for the ones at the place closest to a snp
+                # targeting range
+                if i in all_nearest_read_coverage_range_to_snp_targeting_ranges:
+                    continue
+                # first range will be gene_transcription_start
+                # the next will be gene_transcription_start + num_bases_between_cov_ranges
+                # and then start * num * 2
+                # overall it would be start * num * i
+                read_coverage_ranges.append(
+                    gene_transcription_start + num_bases_between_cov_ranges * i
+                )
+
+        gene_snp_range_list.append([gene_name, gene_chromosome, num_probe_used,
+                                    num_probe_per_gene_individual - num_probe_used,
+                                    selected_ranges, selected_ranges_snp, read_coverage_ranges])
 
 
 def merge_overlaps(transcription_ranges):
