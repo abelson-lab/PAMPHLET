@@ -228,7 +228,7 @@ def read_CNV_genes_from_user():
 
     CNV_genes_list = CNV_genes_string.split(',')
 
-    cleaned_CNV_genes_list = []
+    cleaned_CNV_genes_list = [[]]
     for CNV_genes in CNV_genes_list:
         cleaned_CNV_genes_list.append([CNV_genes.strip()])
 
