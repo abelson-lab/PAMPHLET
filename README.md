@@ -263,3 +263,9 @@ python3 PAMPHLET.py -t CNV -s cbioportal -c <cbioportal CNV file path> -r <refse
 python3 PAMPHLET.py -t CNV -s cosmic -c <cosmic CNV file path>  -r <refseq gene file path> -p <common snp file path>
 ```
 
+(if user is providing their own list for CNV)
+
+```
+python3 PAMPHLET.py -t CNV -s user -c <cosmic CNV file path>  -r <refseq gene file path> -p <common snp file path>
+```
+

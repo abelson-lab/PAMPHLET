@@ -2,21 +2,23 @@ import csv
 import re
 from typing import List, Dict, Tuple
 
+"""second level function"""
+
 
 def user_chose_options_CNV() -> Tuple[int, int, int, int]:
     informative_individual_percentage = input(
         "Where 1 means 100%, What is the percentage of individuals with an informative output, meaning"
         " having the heterozygous minor allele in all the targeted SNP sites, a number greater than"
         " 1, for example 5, means that all individuals is expected to have on"
-        " average 5 sites with informative output, default is 5")
+        " average 5 sites with informative output, default is 5 ")
 
     num_probe_per_individual = input(
         "How many SNP sites do you want to target, that is the number of probe"
-        "for each individual, default is 100")
+        "for each individual, default is 100 ")
 
     top_X_CNV_gene_to_be_targeted = input(
         "How many gene affected by CNV, do you want to target, start from the "
-        "CNV genes found in the most number of tumours, default is 10"
+        "CNV genes found in the most number of tumours, default is 10 "
     )
 
     targeting_window_size = input(
@@ -88,8 +90,6 @@ def user_chose_options() -> Tuple[bool, int, int, int, int, bool, bool]:
            indel_filter_threshold, cumulative_contribution_threshold, merge_other, \
            cover_entire_gene
 
-
-"""second level function"""
 
 
 def get_bool(prompt: str) -> bool:
@@ -219,6 +219,21 @@ def read_file_choose_cancer(cosmic_mutation_file_name: str,
         chosen_sets = [chosen_primary_tissue_set, chosen_primary_histology_set,
                        chosen_histology_subtype_one_set]
         return chosen_sets
+
+
+def read_CNV_genes_from_user():
+    CNV_genes_string = input("Please type in the CNV genes, separate by comma ")
+
+    CNV_genes_string.strip()
+
+    CNV_genes_list = CNV_genes_string.split(',')
+
+    cleaned_CNV_genes_list = []
+    for CNV_genes in CNV_genes_list:
+        cleaned_CNV_genes_list.append([CNV_genes.strip()])
+
+    return cleaned_CNV_genes_list
+
 
 
 """3rd level function"""

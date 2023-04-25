@@ -3,7 +3,7 @@ import argparse
 from choose_probe_target import choose_probe_placement_point
 from choose_probe_target_CNV import choose_SNP_targets, divide_CNV_by_gene, plot_CNV, visualize_SNP_on_IGV
 from collect_information import define_important_columns, \
-    define_important_columns_CNV, read_file_choose_cancer, \
+    define_important_columns_CNV, read_CNV_genes_from_user, read_file_choose_cancer, \
     read_process_file_CNV_mutation_cbioportal, read_process_file_CNV_mutation_cosmic, read_process_file_point_mutation, \
     user_chose_options, user_chose_options_CNV
 # from temp import define_output_file_heading
@@ -126,9 +126,11 @@ def CNV_main(CNV_source: str, CNV_filename: str, reference_genome_filename: str,
         CNV_genes = read_process_file_CNV_mutation_cbioportal(
             CNV_filename
         )
+    elif CNV_source == 'user':
+        CNV_genes = read_CNV_genes_from_user()
     else:
-        exit('CNV is neither from cosmic nor cbioportal')
         CNV_genes = []
+        exit('CNV is neither from cosmic nor cbioportal nor user')
 
     if CNV_source == 'cosmic':
         plot_CNV(CNV_genes)
@@ -172,7 +174,7 @@ if __name__ == "__main__":
     parser.add_argument('-c', '--CNV', help='Path to cosmic or cbioportal CNV file name',
                         type=str, required=False)
     parser.add_argument('-s', '--source', help='Is CNV from cosmic or cbioportal',
-                        type=str, required=False, choices=['cosmic', 'cbioportal'])
+                        type=str, required=False, choices=['cosmic', 'cbioportal', 'user'])
     parser.add_argument('-r', '--refgene', help='Path to UCSC gene tracks file',
                         type=str, required=False)
     parser.add_argument('-p', '--snp', help='Path to snp file name',
