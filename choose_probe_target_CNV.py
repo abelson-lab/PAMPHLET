@@ -8,7 +8,6 @@ from others import write_output_excel, write_output_txt
 
 def divide_CNV_by_gene(
         gene_mutation_type_info_dict: Dict[str, dict]):
-
     # visualize_CNV_on_IGV(gene_mutation_type_info_dict)
 
     all_tumours_ids = []
@@ -76,7 +75,6 @@ def visualize_CNV_on_IGV(gene_mutation_type_info_dict):
 
 
 def plot_CNV(CNV_genes):
-
     # find all tumours
     # skip the first row since it is the header
     all_tumour = []
@@ -97,7 +95,7 @@ def plot_CNV(CNV_genes):
         selected_tumour.extend(gene_tumour)
         selected_tumour = list(set(selected_tumour))
 
-        cover_sizes_percentage.append(len(selected_tumour)/num_all_unique_tumour)
+        cover_sizes_percentage.append(len(selected_tumour) / num_all_unique_tumour)
 
     print("number of unique tumours", num_all_unique_tumour)
     plt.plot(cover_sizes_percentage, linewidth=1)
@@ -110,7 +108,6 @@ def plot_CNV(CNV_genes):
 def choose_SNP_targets(CNV_genes, reference_genome_filename, needed_minor_allele_frequency,
                        common_snp_filename, top_X_CNV_gene_to_be_targeted, targeting_window_size,
                        num_probe_per_gene_individual):
-
     gene_ranges_dict = {}
 
     # map gene to transcription
@@ -134,7 +131,6 @@ def choose_SNP_targets(CNV_genes, reference_genome_filename, needed_minor_allele
                                   top_X_CNV_gene_to_be_targeted)
 
     print("mapped position to gene for all CNV genes")
-
 
     # map each snp to a gene (gene to snps dict)
     gene_snps_dict = {}
@@ -163,6 +159,15 @@ def choose_SNP_targets(CNV_genes, reference_genome_filename, needed_minor_allele
     gene_snp_range_list = []
     range_placement_snp(CNV_genes, gene_name_transcription_dict, num_probe_per_gene_individual, snp_existence_dict,
                         targeting_window_size, top_X_CNV_gene_to_be_targeted, gene_snp_range_list)
+
+    gene_snp_range_list.insert(0, ['gene', 'chromosome', 'transcription start',
+                                   'transcription end', 'number of snp ranges',
+                                   'number of read cov ranges', 'first snp', 'last snp',
+                                   'read coverage ranges (starts)'])
+
+    # gene_name, gene_chromosome, gene_transcription_start, gene_transcription_end,
+    # num_probe_used, num_probe_per_gene_individual - num_probe_used,
+    # first_snp, last_snp, read_coverage_ranges
 
     write_output_excel(gene_snp_range_list, "snp_range.xlsx")
 
@@ -275,7 +280,6 @@ def map_gene_to_snps(gene_snps_dict, common_snp_filename, position_gene_dict):
 
 def find_all_good_snps(CNV_genes, all_snp_per_gene, gene_name_transcription_dict, gene_snps_dict,
                        needed_minor_allele_frequency, snp_list_igv_format_after, top_X_CNV_gene_to_be_targeted):
-
     for CNV_gene_section in CNV_genes[1:top_X_CNV_gene_to_be_targeted + 1]:
 
         # for each CNV gene, get its transcription region
@@ -356,7 +360,6 @@ def find_all_good_snps(CNV_genes, all_snp_per_gene, gene_name_transcription_dict
 
 def range_placement_snp(CNV_genes, gene_name_transcription_dict, num_probe_per_gene_individual, snp_existence_dict,
                         targeting_window_size, top_X_CNV_gene_to_be_targeted, gene_snp_range_list):
-
     # for each CNV, optimize probe placement
     for CNV_gene_section in CNV_genes[1:top_X_CNV_gene_to_be_targeted + 1]:
         gene_name = CNV_gene_section[0]
@@ -381,7 +384,7 @@ def range_placement_snp(CNV_genes, gene_name_transcription_dict, num_probe_per_g
         # first range
 
         best_snp_range_list = []
-        snp_range_num_snp_dict = {} # maps range start of the num of snp of that range
+        snp_range_num_snp_dict = {}  # maps range start of the num of snp of that range
         initial_range_num_snps = 0
         range_snp_locations_dict = {}
         for i in range(range_start, range_end):
@@ -422,7 +425,6 @@ def range_placement_snp(CNV_genes, gene_name_transcription_dict, num_probe_per_g
 
             best_snp_range_list.append([range_start, current_range_num_snps, range_snp_locations_list])
 
-
         # sort it
         best_snp_range_list.sort(key=lambda x: x[1], reverse=True)
 
@@ -453,12 +455,23 @@ def range_placement_snp(CNV_genes, gene_name_transcription_dict, num_probe_per_g
             selected_ranges_snp.append(range_snp_location)
 
             # remove new overlapping ranges
-            for i in range(snp_range_start - 80, snp_range_start + 80):
+            for i in range(snp_range_start - 80, snp_range_start + 80 + 1):
                 overlapping_ranges[i] = ''
 
             # go to next one
             best_snp_range_list_index += 1
             num_probe_used += 1
+
+        # get the first and last snp
+        selected_ranges_first_snps = []
+        selected_ranges_last_snps = []
+        # selected_ranges_snp is a list of list of snp of each range
+        for one_range in selected_ranges_snp:
+            one_range.sort()
+            first_snp = one_range[0]
+            last_snp = one_range[-1]
+            selected_ranges_first_snps.append(first_snp)
+            selected_ranges_last_snps.append(last_snp)
 
         # if we have probes left, add them
         read_coverage_ranges = []
@@ -491,9 +504,13 @@ def range_placement_snp(CNV_genes, gene_name_transcription_dict, num_probe_per_g
                     gene_transcription_start + num_bases_between_cov_ranges * i
                 )
 
-        gene_snp_range_list.append([gene_name, gene_chromosome, num_probe_used,
-                                    num_probe_per_gene_individual - num_probe_used,
-                                    selected_ranges, selected_ranges_snp, read_coverage_ranges])
+        # I removed selected range (which is the range start)
+        # TODO: I used selected range start to remove read cov range
+        # could use first snp instead.
+        gene_snp_range_list.append([
+            gene_name, gene_chromosome, gene_transcription_start, gene_transcription_end,
+            num_probe_used, num_probe_per_gene_individual - num_probe_used,
+            selected_ranges_first_snps, selected_ranges_last_snps, read_coverage_ranges])
 
 
 def merge_overlaps(transcription_ranges):
@@ -523,7 +540,6 @@ def merge_overlaps(transcription_ranges):
 
 def visualize_SNP_on_IGV(common_snp_filename):
     snp_list_igv_format = []
-
 
     with open(common_snp_filename) as snp_list:
         next(snp_list)
@@ -567,6 +583,6 @@ def visualize_SNP_on_IGV(common_snp_filename):
                 ])
 
             num += 1
-            print(num, num/13347306)
+            print(num, num / 13347306)
 
     write_output_txt(snp_list_igv_format, 'snp_IGV_before.bed')
