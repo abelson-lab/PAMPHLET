@@ -1,6 +1,6 @@
 # PAMPHLET
 
-Here we present a manual with examples detailing how to use PAMPHLET to generate recurrently mutated genomics
+Here we present a manual with examples detailing how to use PAMPHLET to generate ranges that cover recurrently mutated genomics
 coordinates for targeted sequencing panels based on prior knowledge, such as from mutation data obtained from the
 Catalogue of Somatic Mutations in Cancer (COSMIC) and cBio Cancer Genomics Portal (CBioPortal).
 
@@ -22,16 +22,21 @@ This pipeline requires the following software and packages:
 ### To download the COSMIC mutation file
 
 1. Go to COSMIC (https://cancer.sanger.ac.uk/cosmic) and log in. Registration might be required
-2. On the download page (https://cancer.sanger.ac.uk/cosmic/download), download COSMIC mutation data that includes both
+2. On the archive download page (https://cancer.sanger.ac.uk/cosmic/download), download COSMIC mutation data that includes both
    targeted and genome-wide screens. On the website, it is named 'CosmicMutantExport.tsv.gz'
-3. To run the example, use either the 'Download Whole file' option or the 'Download Filtered File' option, and fill in '
-   haematopoietic_and_lymphoid_tissue' for the 'Filter by cancer' option.
+3. Use either the 'Download Whole file' option or the 'Download Filtered File' option.
+You can download a filtered file if you already know which primary tissue the cancer type you want to target belongs to,
+for example, chronic lymphocytic leukemia belongs to the haematopoietic and lymphoid tissue. You can find what primary tissues are included on 
+the cancer browser page (https://cancer.sanger.ac.uk/cosmic/browse/tissue)
+4. To run the example, use either the 'Download Whole file' option or the 'Download Filtered File' option, and fill in '
+haematopoietic_and_lymphoid_tissue' for the 'Filter by cancer' option.
 
 ### COSMIC mutation file description
 
 The COSMIC mutation file is a table of mutations associated with information that is presented in columns such as
 mutation CDS (the nucleotide mutation), mutation description (amino acid level mutation type), genomics coordinate,
 cancer type, gene name, tumour id. Each entry in the file is linked to a single tumour ID and one genomic coordinate.
+
 
 ### To download the gene track file
 
@@ -40,24 +45,29 @@ cancer type, gene name, tumour id. Each entry in the file is linked to a single 
 
 ### Gene track file description
 
+This file (gene track) is needed for PAMPHLET to target all coding exons. 
 The gene track list the genomic coordinate for the coding region and transcription region of each gene.
 
-### Run with example data
+### How PAMPHLET work: an example with myeloid cancer mutations
 
+COSMIC v97 (Nov 2022) was used for this example. This command runs PAMPHLET on myeloid cancer mutations in the default setting.
+Go to the directory where you put the code files and type the following command into the terminal.
 ```
 python3 PAMPHLET.py -t sub_indel -m <cosmic mutation file path> -r <refseq gene file path> -d default -a m 
 ```
-
-### Tool Description
 
 #### Step 0: Read file and Specify User Preferences
 
 PAMPHLET takes a COSMIC mutation file and an UCSC gene track as input to output range that targets substitutions and
 small insertions and deletions (small indels). Users can choose only to target mutations that originated from any
-cancer. Separately, the PAMPHLET provides an option to cover the entire coding region of any gene in addition to the
-ranges covering substitutions and small indels, which is called "cover entire gene."
+cancer. Separately, the PAMPHLET provides an option to cover the all coding exons of any gene in addition to the
+ranges covering substitutions and small indels, which is called "Cover All Coding Exons"
 
-<p style="text-align: center;"> <strong>Cover Entire Gene:</strong> Whether to cover the entire coding region of any gene.</p> 
+<p style="text-align: center;"> <strong>Cover All Coding Exons:</strong> Whether to cover the all coding exons of any gene.</p> 
+
+If you would like to target all the coding exons, enter the gene's HGNC
+(Human Genome Organisation Gene Nomenclature Committee) symbol. You can find the HGNC symbol of any gene
+by searching in any search engine with the name/symbol you know the gene by, along with the term "HGNC". 
 
 #### Step 1: Cancer Type
 
@@ -95,6 +105,8 @@ will be filtered out.</p>
 <p style="text-align: center;"> <strong>Include Non-Exonic Mutation:</strong> Whether the user wants to include mutations
 not in exons.</p> 
 
+The user may want to include non-exonic mutations because occasionally, they might be crucial to cancer progression, for example, a mutation in promoters.
+
 For the example, in the terminal, it lists the number of mutations and tumours before and after each filter.
 
 ```
@@ -126,8 +138,8 @@ total number of tumours with only recurrent mutations after indel filter 33078
 Fourth, it ranks each unique mutation by the number of tumours the mutations are reported in, with a decreasing order.
 At this point, PAMPHLET produces a table ranking the mutations by the number of tumours, where the most recurrent
 mutation is at the top, along with their locations, amino acid changes, corresponding tumour sets, and corresponding
-genes. See the example intermediate output below.
-![img.png](./new%20intermediate%20output.png)
+genes. The intermediate output file named 'input.txt' is stored in the folder where the code is located. See the example intermediate output below.
+![img.png](./intermediate%20output%20in%20txt.png)
 
 #### Step 5: Shift and Delete
 
@@ -152,28 +164,45 @@ mutation.
 cover more than one mutation per range </p> 
 
 The final output includes a list of optimal ranges, the mutation each range cover, their corresponding tumours and
-corresponding gene, and a subset for ranges that covers indels. Users can use the final output to find ranges that cover
-X% of tumours based on the cumulative contribution. See the example final output below.
-![img.png](./final%20output%20(all).png)
-![img.png](./final%20output%20indel.png)
+corresponding gene, and a subset for ranges that covers indels. The first range is the most informative, it covers the
+greatest number of non-unique mutations. For example, the first range will capture 52% of all the tumour id, and
+the second one will capture an additional 10% and so on. Users can use the final output to find ranges that cover
+X% of tumours based on cumulative contribution. The final output files named 'range.txt' and 'indels_ranges.txt'
+is stored in the folder where the code is located. See the example final output below.
+![img.png](./final%20output%20(all)%20in%20txt.png)
+![img.png](./final%20output%20(indel)%20in%20txt.png)
 
-### Running the code
+### Running the default and in general
 
-Go to the directory where you put the code files and type into the terminal.
+Go to the directory where you put the code files and type the following commands
+into the terminal.
 
+This is the command for general use
 ```
 python3 PAMPHLET.py -t sub_indel -m <cosmic mutation file path> -r <refseq gene file path>
 ```
 
+You can use the '-d default' option to use the default for all user specification option 
+```
+python3 PAMPHLET.py -t sub_indel -m <cosmic mutation file path> -r <refseq gene file path> -d default
+```
+
 ## CNV
 
-### To download the COSMIC mutation file
+The user just needs one of the three, a COSMIC CNV file, a cBioPortal CNV file, or a user-provided gene list. 
+DbSNP is required since it contains the genomic location of common SNPs and their allelic frequencies.
+
+### To download the COSMIC CNV file
 
 1. Go to COSMIC (https://cancer.sanger.ac.uk/cosmic) and log in. Registration might be required
 2. On the download page (https://cancer.sanger.ac.uk/cosmic/download), download the file for "Copy Number Variants.". On
    the website, it is named 'CosmicCompleteCNA.tsv.gz'
-3. To run the example, use either the 'Download Whole file' option or the 'Download Filtered File' option, and fill in '
-   haematopoietic_and_lymphoid_tissue' for the 'Filter by cancer' option.
+3. Use either the 'Download Whole file' option or the 'Download Filtered File' option, and fill in '
+   haematopoietic_and_lymphoid_tissue' for the 'Filter by cancer' option. You can download a filtered file
+   if you already know which primary tissue the cancer type you want to target belongs to,
+   for example, chronic lymphocytic leukemia belongs to the haematopoietic and lymphoid tissue.
+   you can find what primary tissues are included on the 
+   cancer browser page (https://cancer.sanger.ac.uk/cosmic/browse/tissue)
 
 ### COSMIC CNV File description
 
@@ -203,22 +232,22 @@ The dbSNP file lists single nucleotide polymorphisms (SNP). Each SNP also includ
 positions, class, allele frequency count, and major and minor allelic frequencies. Class indicates the simple nucleotide
 polymorphism type, such as single nucleotide variation. Allele frequency count indicates the number of alleles.
 
-### Run with example data
+### How PAMPHLET work: an example with myeloid cancer CNV
 
-The example only works with COSMIC file.
-
+COSMIC v97 (Nov 2022) was used for this example.
+This command runs PAMPHLET on myeloid cancer mutations in the default setting.
+Go to the directory where you put the code files and type into the terminal.
 ```
 python3 PAMPHLET.py -t CNV -s cosmic -m <cosmic mutation file path> -r <refseq gene file path> -p <common snp file path> 
 -d default -a m
 ```
 
-### Tool description
 
-The user can use the COSMIC CNV file, the cBioPortal CNV file, or provide a gene list. It targets bi-allele heterozygous
-SNP because tho allelic frequency of those SNP sites shifts away from 0.5.
+PAMPHLET targets bi-allele heterozygous SNP because the allelic frequency of those SNP sites shifts away from 0.5.
 
 1. PAMPHLET's CNV workflow starts by first sorting the genes by the number of tumours in which they were found to be
-   involved. These are the CNV genes. See the example ranking below.
+   involved. These are the CNV genes, the intermediate output. The file named 'CNV gene ranked.txt' is
+stored in the folder where the code is located. See the example ranking below.
    ![img.png](./CNV%20genes%20ranked.png)
 2. It then calculates Required MAF by dividing Heterozygous SNP Number by Number of Probes
 
@@ -231,10 +260,10 @@ individual </p>
 3. To illustrate, suppose only 100 probes are supplied per individual per gene, and assume one probe targets at least 1
    SNP site. If the user wishes to obtain informative output in 5 of those SNP sites for every individual, in that case,
    the MAF needs to be around 5%.
-4. Next, for the top CNV genes, find SNPs around the MAF. It excludes all simple nucleotide polymorphism, except SNP,
-through the class column in dbSNP file. As well, it excludes non bi-allele SNP through allele frequency count.
+4. Next, for the top CNV genes, filter SNPs to only contain SNPs within 1% of the required MAF. It excludes all simple nucleotide polymorphism, except SNP,
+through the class column in the dbSNP file. As well, it excludes non-bi-allele SNP through allele frequency count.
 
-<p style="text-align: center;"> <strong>Top CNV Genes:</strong> For example, the top 10 CNV genes by number of tumour 
+<p style="text-align: center;"> <strong>Top CNV Genes:</strong> For example, the top 10 CNV genes by number of tumours 
 or samples it is found in.</p>
 
 5. After SNPs are found, they undergo a similar process to shift and delete. However, this time it is the number of SNPs
@@ -243,29 +272,38 @@ or samples it is found in.</p>
    part of the gene where a range has yet to be placed. This step gives the read cov ranges. 
 
 The final output is a list of range that targets the SNP of CNV genes. First and last snp is the first and last snp of
-each range. Read coverage ranges (starts) refer to the starting coordinate of each read cov range. See the example final
-output below
-![img.png](./CNV%20workflow%20final%20output.png)
+each range. Read coverage ranges (starts) refer to the starting coordinate of each read cov range. The file named 
+'snp_range.txt' is stored in the folder where the code is located. See the example final output below
+![img.png](./CNV%20workflow%20final%20output%20in%20txt.png)
 
-## Running the code
+### Running the default and in general
 
-Go to the directory where you put the code files and type into the terminal.
+Go to the directory where you put the code files and type the following commands
+into the terminal.
 
+These three are the commands for general use
 (if user is using cbioportal for CNV)
 
 ```
-python3 PAMPHLET.py -t CNV -s cbioportal -c <cbioportal CNV file path> -r <refseq gene file path> -p <common snp filename>
+python3 PAMPHLET.py -t CNV -s cbioportal -c <cbioportal CNV file path> -r <refseq gene file path> -p <common snp file path>
 ```
 
 (if user is using cosmic for CNV)
 
 ```
-python3 PAMPHLET.py -t CNV -s cosmic -c <cosmic CNV file path>  -r <refseq gene file path> -p <common snp file path>
+python3 PAMPHLET.py -t CNV -s cosmic -c <cosmic CNV file path> -r <refseq gene file path> -p <common snp file path>
 ```
 
-(if user is providing their own list for CNV)
+(if the user is providing their own list for CNV)
 
 ```
-python3 PAMPHLET.py -t CNV -s user -c <cosmic CNV file path>  -r <refseq gene file path> -p <common snp file path>
+python3 PAMPHLET.py -t CNV -s user -r <refseq gene file path> -p <common snp file path>
+```
+
+You can use the '-d default' option to use the default for all user specification option 
+```
+python3 PAMPHLET.py -t CNV -s cbioportal -c <cbioportal CNV file path> -r <refseq gene file path> -p <common snp file path> -d default
+python3 PAMPHLET.py -t CNV -s cosmic -c <cosmic CNV file path> -r <refseq gene file path> -p <common snp file path> -d default
+python3 PAMPHLET.py -t CNV -s user -r <refseq gene file path> -p <common snp file path>  -d default
 ```
 

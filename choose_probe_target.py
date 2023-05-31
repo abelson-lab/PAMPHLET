@@ -38,23 +38,24 @@ def choose_probe_placement_point(
         targeting_window_size,
         indel_filter_threshold, recurrent_definition, merge_others)
 
-    mutation_list_IGV = copy.deepcopy(mutation_list)
-    mutation_list_IGV_format = [probe_range[0:9] for probe_range in mutation_list_IGV]
-    for probe_range in mutation_list_IGV_format:
-        probe_range[1] = str(int(probe_range[1]) - 1)
-        probe_range[6] = str(int(probe_range[6]) - 1)
-    write_output_txt(mutation_list_IGV_format, 'range_IGV.bed')
+    # Code that changes output file to IGV format
+    # mutation_list_IGV = copy.deepcopy(mutation_list)
+    # # keep first four, add IGV format specification, '1' and '+' and color code
+    # mutation_list_IGV_format = [probe_range[0:4] + ['1'] + ['+'] + probe_range[1:3] + ['21816532'] for probe_range in mutation_list_IGV]
+    # # correct the start of probe/first mutation, because IGV show '200' when it
+    # # should be showing '199'
+    # for probe_range in mutation_list_IGV_format:
+    #     probe_range[1] = str(int(probe_range[1]) - 1)
+    #     probe_range[6] = str(int(probe_range[6]) - 1)
+    # write_output_txt(mutation_list_IGV_format, 'range_IGV.bed')
 
     mutation_list.insert(0, ['chromosome', 'first_mutation',
                              'last mutation', 'range name ',
-                             'just 1', 'just plus', 'first mutation',
-                             'last mutation', 'color code',
-                             'cumulative contribution', 'range mutations',
-                             'tumours covered', 'number of tumours'])
+                             'cumulative contribution', 'number of tumours'])
     indel_probe_list.insert(0, ['range name', 'chromosome',
                                 'first mutation', 'last mutation', 'range mutations'])
-    write_output_excel(mutation_list, 'range.xlsx')
-    write_output_excel(indel_probe_list, 'indels_ranges.xlsx')
+    write_output_txt(mutation_list, 'range.txt')
+    write_output_txt(indel_probe_list, 'indels_ranges.txt')
 
 
 """1st level function"""
@@ -129,8 +130,7 @@ def chose_most_recurrent_mutation_then_probe_centered_at_mutation_center(
                 unique_tumours = set(tumour_set)
                 num_unique_tumours = len(list(set(tumour_set)))
                 input_list.append(
-                    [position, mutation_notation, unique_tumours,
-                     num_unique_tumours, gene])
+                    [position, num_unique_tumours, gene, mutation_notation])
 
         for substitution, tumour_set in position_tumour_substitution.items():
             all_position_tumour_dict_substitution[substitution] = set(tumour_set)
@@ -142,13 +142,13 @@ def chose_most_recurrent_mutation_then_probe_centered_at_mutation_center(
             all_position_tumour_dict_insertion[insertion] = set(tumour_set)
 
     # sort by the number of unique tumours
-    input_list.sort(key=lambda x: x[3], reverse=True)
+    input_list.sort(key=lambda x: x[1], reverse=True)
 
-    input_list.insert(0, ['mutation_location', 'mutation aa', 'tumour set',
-                          'size of tumour set', 'gene name'])
+    input_list.insert(0, ['mutation_location', 'size of tumour set', 'gene name',
+                          'mutation aa'])
 
     # show data before choose ranges
-    write_output_excel(input_list, 'input.xlsx')
+    write_output_txt(input_list, 'input.txt')
 
     tumour_set_list = []
     unique_tumour_id = []
@@ -179,11 +179,12 @@ def chose_most_recurrent_mutation_then_probe_centered_at_mutation_center(
     #                       recurrent_definition, targeting_window_size)
 
 
-    plt.plot(cover_sizes_percentage, linewidth=1)
-    plt.ylabel('percentage of tumour covered')
-    plt.xlabel('number of ' + str(targeting_window_size) + 'bp ranges selected')
-    plt.title('coverage of tumours with increasing probe in lymphoid')
-    plt.savefig('range coverage non-CNV.pdf')
+    # code that plots the increase in coverage of tumour from more ranges
+    # plt.plot(cover_sizes_percentage, linewidth=1)
+    # plt.ylabel('percentage of tumour covered')
+    # plt.xlabel('number of ' + str(targeting_window_size) + 'bp ranges selected')
+    # plt.title('coverage of tumours with increasing probe in lymphoid')
+    # plt.savefig('range coverage non-CNV.pdf')
 
     return mutation_list, indel_probe_list
 
@@ -407,6 +408,7 @@ def find_probe_cover(all_position_tumour_dict: Dict[str, Set[str]],
     :return:
     """
     num_probe = 0
+    print('cumulative_contribution')
     while len(covered_tumour_id) < percentage_cover_threshold:
 
         # find the position that currently has the most tumour ids
@@ -443,15 +445,8 @@ def find_probe_cover(all_position_tumour_dict: Dict[str, Set[str]],
             'chr' + chromosome,
             first_mutation_selected_position_and_probe,
             last_mutation_selected_position_and_probe,
-            gene_name + ' ' + str(num_probe),
-            '1',
-            '+',
-            first_mutation_selected_position_and_probe,
-            last_mutation_selected_position_and_probe,
-            '21816532',
+            gene_name + '_' + str(num_probe),
             cumulative_contribution,
-            all_mutation_in_probe,
-            tumour_set_selected_position_and_probe,
             len(tumour_set_selected_position_and_probe)
         ])
         # position most tumour is represented by its central base pair,
@@ -464,9 +459,10 @@ def find_probe_cover(all_position_tumour_dict: Dict[str, Set[str]],
             all_position_tumour_dict.pop(position_most_tumour)
 
         cover_sizes_percentage.append(cumulative_contribution)
-        print(cumulative_contribution, position_most_tumour,
-              first_mutation_selected_position_and_probe,
-              last_mutation_selected_position_and_probe)
+        print(cumulative_contribution)
+        # print(cumulative_contribution, position_most_tumour,
+        #       first_mutation_selected_position_and_probe,
+        #       last_mutation_selected_position_and_probe)
 
         all_mutation_in_probe.sort()
         if capture_indels:

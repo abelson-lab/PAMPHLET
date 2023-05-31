@@ -32,7 +32,7 @@ def divide_CNV_by_gene(
         num_unique_tumours = len(unique_tumours)
 
         input_list_CNV.append([
-            gene, CNV_coordinates, mutation_type, unique_tumours, num_unique_tumours, num_unique_tumour_ids
+            gene, set(CNV_coordinates), mutation_type, unique_tumours, num_unique_tumours, num_unique_tumour_ids
         ])
 
     input_list_CNV.sort(key=lambda x: x[4], reverse=True)
@@ -98,11 +98,12 @@ def plot_CNV(CNV_genes):
         cover_sizes_percentage.append(len(selected_tumour) / num_all_unique_tumour)
 
     print("number of unique tumours", num_all_unique_tumour)
-    plt.plot(cover_sizes_percentage, linewidth=1)
-    plt.ylabel('percentage of tumour covered')
-    plt.xlabel('number of CNV target genes selected')
-    plt.title('coverage of tumours with increasing ranges in myeloid CNV')
-    plt.savefig('coverage.pdf')
+    # code that plot the coverage increase from more ranges
+    # plt.plot(cover_sizes_percentage, linewidth=1)
+    # plt.ylabel('percentage of tumour covered')
+    # plt.xlabel('number of CNV target genes selected')
+    # plt.title('coverage of tumours with increasing ranges in myeloid CNV')
+    # plt.savefig('coverage.pdf')
 
 
 def choose_SNP_targets(CNV_genes, reference_genome_filename, needed_minor_allele_frequency,
@@ -146,9 +147,9 @@ def choose_SNP_targets(CNV_genes, reference_genome_filename, needed_minor_allele
 
     print("kept only good snps")
 
-    write_output_txt(snp_list_igv_format_after, 'snp_IGV_after.bed')
+    # write_output_txt(snp_list_igv_format_after, 'snp_IGV_after.bed')
 
-    write_output_excel(CNV_genes[1:top_X_CNV_gene_to_be_targeted + 1], 'CNV_with_snps.xlsx')
+    # write_output_txt(CNV_genes[1:top_X_CNV_gene_to_be_targeted + 1], 'CNV_with_snps.txt')
 
     # record if each base has a snp (if yes, it is in this dict)
     snp_existence_dict = {}
@@ -160,16 +161,14 @@ def choose_SNP_targets(CNV_genes, reference_genome_filename, needed_minor_allele
     range_placement_snp(CNV_genes, gene_name_transcription_dict, num_probe_per_gene_individual, snp_existence_dict,
                         targeting_window_size, top_X_CNV_gene_to_be_targeted, gene_snp_range_list)
 
-    gene_snp_range_list.insert(0, ['gene', 'chromosome', 'transcription start',
-                                   'transcription end', 'number of snp ranges',
-                                   'number of read cov ranges', 'first snp', 'last snp',
-                                   'read coverage ranges (starts)'])
+    gene_snp_range_list.insert(0, ['chromosome', 'range start', 'range end',
+                                   'range name', 'transcription start', 'transcription end'])
 
     # gene_name, gene_chromosome, gene_transcription_start, gene_transcription_end,
     # num_probe_used, num_probe_per_gene_individual - num_probe_used,
     # first_snp, last_snp, read_coverage_ranges
 
-    write_output_excel(gene_snp_range_list, "snp_range.xlsx")
+    write_output_txt(gene_snp_range_list, "snp_range.txt")
 
 
 def map_gene_to_transcription_region(gene_name_transcription_dict, gene_ranges_dict, reference_genome_filename):
@@ -507,10 +506,37 @@ def range_placement_snp(CNV_genes, gene_name_transcription_dict, num_probe_per_g
         # I removed selected range (which is the range start)
         # TODO: I used selected range start to remove read cov range
         # could use first snp instead.
-        gene_snp_range_list.append([
-            gene_name, gene_chromosome, gene_transcription_start, gene_transcription_end,
-            num_probe_used, num_probe_per_gene_individual - num_probe_used,
-            selected_ranges_first_snps, selected_ranges_last_snps, read_coverage_ranges])
+        range_number = 1
+        for i in range(len(selected_ranges_first_snps)):
+            a_first_snp = selected_ranges_first_snps[i]
+            a_last_snp = selected_ranges_last_snps[i]
+            range_name = str(gene_name) + '_CNVsnp_' + str(range_number)
+
+            gene_snp_range_list.append([
+                gene_chromosome,
+                a_first_snp,
+                a_last_snp,
+                range_name,
+                gene_transcription_start,
+                gene_transcription_end,
+            ])
+            range_number += 1
+
+        for i in range(len(read_coverage_ranges)):
+            a_read_cov_start = read_coverage_ranges[i]
+            range_name = str(gene_name) + '_CNVreadcov_' + str(range_number)
+            a_read_cov_end = str(int(a_read_cov_start) + int(targeting_window_size))
+
+            gene_snp_range_list.append([
+                gene_chromosome,
+                a_read_cov_start,
+                a_read_cov_end,
+                range_name,
+                gene_transcription_start,
+                gene_transcription_end,
+            ])
+
+            range_number += 1
 
 
 def merge_overlaps(transcription_ranges):

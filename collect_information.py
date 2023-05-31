@@ -32,7 +32,7 @@ def user_chose_options_CNV() -> Tuple[int, int, int, int]:
     targeting_window_size = int(targeting_window_size)
 
     return informative_individual_percentage, num_probe_per_individual, \
-        top_X_CNV_gene_to_be_targeted, targeting_window_size
+           top_X_CNV_gene_to_be_targeted, targeting_window_size
 
 
 def user_chose_options() -> Tuple[bool, int, int, int, int, bool, bool]:
@@ -43,38 +43,35 @@ def user_chose_options() -> Tuple[bool, int, int, int, int, bool, bool]:
     :return: These fives choices
     """
 
-    remove_intronic_mutation = get_bool(
-        "Do you want remove intronic mutations, enter yes if you want to, default is yes ")
-    recurrent_definition = input("How do you define recurrent mutation,"
-                                 " default is a mutation is only consider"
-                                 " recurrent if it appear in more than 2"
-                                 " tumours, including 2 tumours ")
+    remove_non_exonic_mutation = get_bool(
+        "Do you want remove non-exonic mutations (yes/no) ")
+    recurrent_definition = input("Define recurrent mutation based on numbers"
+                                 " of tumour (enter a number greater or equal to 2) ")
     targeting_window_size = input("What is your window size, or the number"
                                   " of base pairs that can be effectively"
                                   " targeted, default is 80bp ")
     indel_filter_threshold = input("What size of indel is too big to be cover"
-                                   " by your window size, default is 30bp or"
-                                   " greater will be filtered out ")
+                                   " by your window size, the default indels above 30bp"
+                                   " will be filtered out ")
     cumulative_contribution_threshold = input("what is the coverage of all"
                                               " recurrent tumours you want for"
-                                              " the probes, default is reporting"
+                                              " the probes, the default is reporting"
                                               " until it covers 90% of the"
                                               " tumour ")
     merge_other = get_bool(
         "Do you want to merge other mutation within the targeting window"
-        " or do you want to have one probe target only one mutation,"
-        " enter yes if you want to, default is yes ")
+        " (yes/no) ")
 
-    cover_entire_gene = get_bool(
-        "Do you want to cover an entire gene?"
+    cover_all_coding_exon = get_bool(
+        "Do you want to cover all coding exon of any gene?"
         " this is in addition to all the other probes"
-        "default is no,"
+        "(yes/no) "
     )
 
-    if remove_intronic_mutation == "yes":
-        remove_intronic_mutation = True
+    if remove_non_exonic_mutation == "yes":
+        remove_non_exonic_mutation = True
     else:
-        remove_intronic_mutation = False
+        remove_non_exonic_mutation = False
 
     if merge_other == "yes":
         merge_other = True
@@ -86,10 +83,9 @@ def user_chose_options() -> Tuple[bool, int, int, int, int, bool, bool]:
     indel_filter_threshold = int(indel_filter_threshold)
     cumulative_contribution_threshold = int(cumulative_contribution_threshold)
 
-    return remove_intronic_mutation, recurrent_definition, targeting_window_size, \
+    return remove_non_exonic_mutation, recurrent_definition, targeting_window_size, \
            indel_filter_threshold, cumulative_contribution_threshold, merge_other, \
-           cover_entire_gene
-
+           cover_all_coding_exon
 
 
 def get_bool(prompt: str) -> bool:
@@ -102,11 +98,11 @@ def get_bool(prompt: str) -> bool:
 
 
 def read_file_choose_cancer(cosmic_mutation_file_name: str,
-                            use_default: bool, default_which: str, search_CNV: bool) -> List[List[str]]:
+                            default_cancer: str, search_CNV: bool) -> List[List[str]]:
     """
     Reads the cosmic file, then ask the user to choose the primary tissue,
     the primary histology, and the histology subtype one they want to target
-    :param default_which: either choose lymphoid cancer or myeloid cancers
+    :param default_cancer: either choose lymphoid cancer or myeloid cancers
     :param search_CNV: whether we are searching in the CNV file or not
     :param cosmic_mutation_file_name: The file name of the cosmic mutation file,
     it is under COSMIC Mutation on the cosmic website
@@ -128,22 +124,21 @@ def read_file_choose_cancer(cosmic_mutation_file_name: str,
         histology_type_1_col_num = 12
         print("searching the mutation file to choose cancer")
 
-    if use_default:
+    if default_cancer == 'l' or default_cancer == 'm':
         all_primary_tissue_set["haematopoietic_and_lymphoid_tissue"] = ""
-        if default_which == 'l':
+
+        if default_cancer == 'l':
             all_primary_histology_set["lymphoid_neoplasm"] = ""
-        elif default_which == 'm':
+        elif default_cancer == 'm':
             all_primary_histology_set["haematopoietic_neoplasm"] = ""
 
         with open(cosmic_mutation_file_name) as mutation_file:
             csv_reader = csv.reader(mutation_file, delimiter=',')
             for row in csv_reader:
-                # mutation file this is row 12, CNV its row 10
                 histology = row[histology_type_1_col_num]
-
-                if default_which == 'l':
+                if default_cancer == 'l':
                     all_histology_subtype_one_set[histology] = ""
-                elif default_which == 'm':
+                elif default_cancer == 'm':
                     if 'myelo' in histology:
                         all_histology_subtype_one_set[histology] = ""
 
@@ -170,38 +165,30 @@ def read_file_choose_cancer(cosmic_mutation_file_name: str,
         print("searching all primary tissue")
         with open(cosmic_mutation_file_name) as mutation_file:
             csv_reader = csv.reader(mutation_file, delimiter=',')
-
+            next(csv_reader)
             for row in csv_reader:
                 if row[primary_tissue_col_num] not in all_primary_tissue_set:
                     all_primary_tissue_set[row[primary_tissue_col_num]] = ""
 
         all_primary_tissue_set = list(set(all_primary_tissue_set))
-        print_set_as_numbered_list(all_primary_tissue_set)
-        cancer_list_indices_list = read_number_as_list_indices()
-        chosen_primary_tissue_set = []
-        report_element_at_indices(all_primary_tissue_set,
-                                  cancer_list_indices_list,
-                                  chosen_primary_tissue_set)
+        chosen_primary_tissue_set = ask_user_to_choose_from_list(all_primary_tissue_set)
 
         print("searching all primary histology")
         with open(cosmic_mutation_file_name) as mutation_file:
             csv_reader = csv.reader(mutation_file, delimiter=',')
+            next(csv_reader)
             for row in csv_reader:
                 if row[primary_tissue_col_num] in chosen_primary_tissue_set \
                         and row[primary_histology_col_num] not in all_primary_histology_set:
                     all_primary_histology_set[row[primary_histology_col_num]] = ""
 
         all_primary_histology_set = list(set(all_primary_histology_set))
-        print_set_as_numbered_list(all_primary_histology_set)
-        cancer_list_indices_list = read_number_as_list_indices()
-        chosen_primary_histology_set = []
-        report_element_at_indices(all_primary_histology_set,
-                                  cancer_list_indices_list,
-                                  chosen_primary_histology_set)
+        chosen_primary_histology_set = ask_user_to_choose_from_list(all_primary_histology_set)
 
         print("searching all histology subtype 1")
         with open(cosmic_mutation_file_name) as mutation_file:
             csv_reader = csv.reader(mutation_file, delimiter=',')
+            next(csv_reader)
             for row in csv_reader:
                 if row[primary_tissue_col_num] in chosen_primary_tissue_set \
                         and row[primary_histology_col_num] in chosen_primary_histology_set \
@@ -209,12 +196,7 @@ def read_file_choose_cancer(cosmic_mutation_file_name: str,
                     all_histology_subtype_one_set[row[histology_type_1_col_num]] = ""
 
         all_histology_subtype_one_set = list(set(all_histology_subtype_one_set))
-        print_set_as_numbered_list(all_histology_subtype_one_set)
-        cancer_list_indices_list = read_number_as_list_indices()
-        chosen_histology_subtype_one_set = []
-        report_element_at_indices(all_histology_subtype_one_set,
-                                  cancer_list_indices_list,
-                                  chosen_histology_subtype_one_set)
+        chosen_histology_subtype_one_set = ask_user_to_choose_from_list(all_histology_subtype_one_set)
 
         chosen_sets = [chosen_primary_tissue_set, chosen_primary_histology_set,
                        chosen_histology_subtype_one_set]
@@ -235,47 +217,54 @@ def read_CNV_genes_from_user():
     return cleaned_CNV_genes_list
 
 
-
 """3rd level function"""
 
 
-def print_set_as_numbered_list(a_list: List[str]):
+def ask_user_to_choose_from_list(cancer_list: List[str]):
+    # cancer_list can be primary tissue/primary histology/histology subtype 1
+
+    # print out the list
     i = 1
-    for cancer in a_list:
+    for cancer in cancer_list:
         print(i, '. ', cancer)
         i += 1
 
-
-"""3rd level function"""
-
-
-def read_number_as_list_indices() -> List[int]:
-    cancer_list_indices = input(
+    # ask user to type in something
+    user_response = input(
         "choose primary tissue/primary histology/histology subtype 1"
-        " you want to target from the list above, "
-        "separate by comma (type in a number) ")
+        " you want to target from the list above."
+        " Please choose one or more options by typing in the corresponding"
+        " numbers, a keyword, or 'all' to select all of them. "
+        " For numbers, please separate them by commas ")
 
-    cancer_list_indices_list = cancer_list_indices.split(',')
+    chosen_cancer_list = []
+    if user_response == 'all':
 
-    cancer_list_indices_list_int = []
-    for index in cancer_list_indices_list:
-        cancer_list_indices_list_int.append(int(index))
+        chosen_cancer_list = cancer_list
 
-    for i in range(len(cancer_list_indices_list_int)):
-        cancer_list_indices_list_int[i] -= 1
+    elif user_response[0].isdigit():
+        cancer_list_indices_list_int = []
+        cancer_list_indices_list = user_response.split(',')
 
-    return cancer_list_indices_list_int
+        # convert string to int
+        for index in cancer_list_indices_list:
+            cancer_list_indices_list_int.append(int(index))
 
+        # reduce each number by 1, since python list starts at 0 index
+        for i in range(len(cancer_list_indices_list_int)):
+            cancer_list_indices_list_int[i] -= 1
 
-"""3rd level function"""
+        chosen_cancer_list = []
+        for indices in cancer_list_indices_list_int:
+            chosen_cancer_list.append(cancer_list[indices])
 
+    else:
+        for cancer in cancer_list:
+            if user_response in cancer:
+                chosen_cancer_list.append(cancer)
 
-def report_element_at_indices(cancer_list: List[str],
-                              cancer_list_indices_list: List[int],
-                              chosen_cancer_list: List[str]):
-    for indices in cancer_list_indices_list:
-        chosen_cancer_list.append(cancer_list[indices])
     print(chosen_cancer_list)
+    return chosen_cancer_list
 
 
 def read_selected_genes(gene_list_file_name):

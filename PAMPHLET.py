@@ -1,14 +1,14 @@
 import argparse
 
 from choose_probe_target import choose_probe_placement_point
-from choose_probe_target_CNV import choose_SNP_targets, divide_CNV_by_gene, plot_CNV, visualize_SNP_on_IGV
+from choose_probe_target_CNV import choose_SNP_targets, divide_CNV_by_gene, plot_CNV
 from collect_information import define_important_columns, \
     define_important_columns_CNV, read_CNV_genes_from_user, read_file_choose_cancer, \
     read_process_file_CNV_mutation_cbioportal, read_process_file_CNV_mutation_cosmic, read_process_file_point_mutation, \
     user_chose_options, user_chose_options_CNV
 # from temp import define_output_file_heading
-from cover_entire_gene import make_probe_these_gene
-from others import write_output_excel
+from cover_all_coding_exon import make_probe_these_gene
+from others import write_output_excel, write_output_txt
 
 
 def mutation_main(cosmic_mutation_filename: str, reference_genome_filename: str,
@@ -16,20 +16,18 @@ def mutation_main(cosmic_mutation_filename: str, reference_genome_filename: str,
 
     if use_default == 'default':
         print("using default")
-        remove_intronic_mutation = True
+        remove_non_exonic_mutation = True
         recurrent_definition = 2
         targeting_window_size = 80
         indel_filter_threshold = 30
         cumulative_contribution_threshold = 90
         merge_others = True
-        cover_entire_gene = False
-        use_default = True
+        cover_all_coding_exons = False
     else:
-        remove_intronic_mutation, recurrent_definition, targeting_window_size, indel_filter_threshold, \
-        cumulative_contribution_threshold, merge_others, cover_entire_gene = user_chose_options()
-        use_default = False
+        remove_non_exonic_mutation, recurrent_definition, targeting_window_size, indel_filter_threshold, \
+        cumulative_contribution_threshold, merge_others, cover_all_coding_exons = user_chose_options()
 
-    if cover_entire_gene:
+    if cover_all_coding_exons:
         make_probe_these_gene(reference_genome_filename)
 
     # # TODO this is where you add more genes, from other papers
@@ -38,14 +36,15 @@ def mutation_main(cosmic_mutation_filename: str, reference_genome_filename: str,
     # all processing relating to point mutations
     important_column_heading_list, important_column_number_list = define_important_columns()
 
-    chosen_set = read_file_choose_cancer(cosmic_mutation_filename, use_default, default_cancer, search_CNV=False)
+    chosen_set = read_file_choose_cancer(cosmic_mutation_filename, default_cancer, search_CNV=False)
 
     gene_mutation_type_info_dict = {}
+    print('Working on selecting mutation from those cancer types')
     read_process_file_point_mutation(cosmic_mutation_filename,
                                      gene_mutation_type_info_dict,
                                      important_column_heading_list,
                                      important_column_number_list, chosen_set,
-                                     remove_intronic_mutation)
+                                     remove_non_exonic_mutation)
 
     choose_probe_placement_point(
         gene_mutation_type_info_dict,
@@ -100,7 +99,6 @@ def CNV_main(CNV_source: str, CNV_filename: str, reference_genome_filename: str,
 
     if use_default == 'default':
         print("using default")
-        use_default = True
     else:
         informative_individual_percentage, num_probe_per_gene_individual, \
         top_X_CNV_gene_to_be_targeted, targeting_window_size = user_chose_options_CNV()
@@ -114,7 +112,8 @@ def CNV_main(CNV_source: str, CNV_filename: str, reference_genome_filename: str,
     gene_mutation_type_info_dict_CNV = {}
 
     if CNV_source == 'cosmic':
-        chosen_set = read_file_choose_cancer(CNV_filename, use_default, default_cancer, search_CNV=True)
+        chosen_set = read_file_choose_cancer(CNV_filename, default_cancer, search_CNV=True)
+        print('Working on selecting CNV from those cancer types')
         read_process_file_CNV_mutation_cosmic(
             CNV_filename,
             gene_mutation_type_info_dict_CNV,
@@ -123,10 +122,12 @@ def CNV_main(CNV_source: str, CNV_filename: str, reference_genome_filename: str,
         )
         CNV_genes = divide_CNV_by_gene(gene_mutation_type_info_dict_CNV)
     elif CNV_source == 'cbioportal':
+        print('Working on reading CNV genes')
         CNV_genes = read_process_file_CNV_mutation_cbioportal(
             CNV_filename
         )
     elif CNV_source == 'user':
+        print('Working on reading CNV genes from your list')
         CNV_genes = read_CNV_genes_from_user()
     else:
         CNV_genes = []
@@ -135,7 +136,7 @@ def CNV_main(CNV_source: str, CNV_filename: str, reference_genome_filename: str,
     if CNV_source == 'cosmic':
         plot_CNV(CNV_genes)
 
-    write_output_excel(CNV_genes, 'CNV gene ranked.xlsx')
+    write_output_txt(CNV_genes, 'CNV gene ranked.txt')
     choose_SNP_targets(CNV_genes, reference_genome_filename, needed_minor_allele_frequency,
                        common_snp_filename, top_X_CNV_gene_to_be_targeted, targeting_window_size,
                        num_probe_per_gene_individual)
@@ -182,7 +183,7 @@ if __name__ == "__main__":
     parser.add_argument('-d', '--default', help='For development purposes, do not use',
                         type=str, default='no', required=False)
     parser.add_argument('-a', '--default_cancer', help='For development purposes, do not use',
-                        type=str, default='m', required=False, choices=['m', 'l'])
+                        type=str, required=False, choices=['m', 'l'])
     args = parser.parse_args()
 
 
