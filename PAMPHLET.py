@@ -8,11 +8,13 @@ from collect_information import define_important_columns, \
     user_chose_options, user_chose_options_CNV
 # from temp import define_output_file_heading
 from cover_all_coding_exon import make_probe_these_gene
-from others import write_output_excel, write_output_txt
+from others import write_output_txt
+# write_output_excel
 
 
-def mutation_main(cosmic_mutation_filename: str, reference_genome_filename: str,
-                  use_default: str, default_cancer: str):
+def mutation_main(cosmic_mutation_filename_targeted: str, cosmic_mutation_filename_genomic: str, cosmic_classification_filename: str,
+                  reference_genome_filename: str, use_default: str,
+                  default_cancer: str):
 
     if use_default == 'default':
         print("using default")
@@ -34,16 +36,22 @@ def mutation_main(cosmic_mutation_filename: str, reference_genome_filename: str,
     # l_chip_gene_set_1 = read_selected_genes(gene_list_file_name)
 
     # all processing relating to point mutations
-    important_column_heading_list, important_column_number_list = define_important_columns()
+    important_column_heading_list = define_important_columns()
 
-    chosen_set = read_file_choose_cancer(cosmic_mutation_filename, default_cancer, search_CNV=False)
+    chosen_phenotype = read_file_choose_cancer(cosmic_classification_filename, default_cancer)
 
     gene_mutation_type_info_dict = {}
     print('Working on selecting mutation from those cancer types')
-    read_process_file_point_mutation(cosmic_mutation_filename,
+    read_process_file_point_mutation(cosmic_mutation_filename_targeted,
                                      gene_mutation_type_info_dict,
                                      important_column_heading_list,
-                                     important_column_number_list, chosen_set,
+                                     chosen_phenotype,
+                                     remove_non_exonic_mutation)
+
+    read_process_file_point_mutation(cosmic_mutation_filename_genomic,
+                                     gene_mutation_type_info_dict,
+                                     important_column_heading_list,
+                                     chosen_phenotype,
                                      remove_non_exonic_mutation)
 
     choose_probe_placement_point(
@@ -89,8 +97,9 @@ def mutation_main(cosmic_mutation_filename: str, reference_genome_filename: str,
     #     'potential_l_chip.xlsx')
 
 
-def CNV_main(CNV_source: str, CNV_filename: str, reference_genome_filename: str,
-             common_snp_filename: str, use_default: str, default_cancer: str):
+def CNV_main(CNV_source: str, CNV_filename: str, classification_filename: str,
+             reference_genome_filename: str, common_snp_filename: str,
+             use_default: str, default_cancer: str):
 
     top_X_CNV_gene_to_be_targeted = 10
     informative_individual_percentage = 5
@@ -107,18 +116,18 @@ def CNV_main(CNV_source: str, CNV_filename: str, reference_genome_filename: str,
 
     # visualize_SNP_on_IGV(common_snp_filename)
 
-    important_column_heading_list_CNV, important_column_number_list_CNV = define_important_columns_CNV()
+    important_column_heading_list_CNV = define_important_columns_CNV()
 
     gene_mutation_type_info_dict_CNV = {}
 
     if CNV_source == 'cosmic':
-        chosen_set = read_file_choose_cancer(CNV_filename, default_cancer, search_CNV=True)
+        chosen_phenotype = read_file_choose_cancer(classification_filename, default_cancer)
         print('Working on selecting CNV from those cancer types')
         read_process_file_CNV_mutation_cosmic(
             CNV_filename,
             gene_mutation_type_info_dict_CNV,
             important_column_heading_list_CNV,
-            important_column_number_list_CNV, chosen_set,
+            chosen_phenotype
         )
         CNV_genes = divide_CNV_by_gene(gene_mutation_type_info_dict_CNV)
     elif CNV_source == 'cbioportal':
@@ -170,7 +179,11 @@ if __name__ == "__main__":
 
     parser.add_argument('-t', '--type', help='type of mutation you want to target (sub_indel or CNV)',
                         type=str, required=False, choices=['sub_indel', 'CNV', 'both'])
-    parser.add_argument('-m', '--mutation', help='Path to cosmic mutation file',
+    parser.add_argument('-m', '--mutation_targeted', help='Path to cosmic mutation file (targeted)',
+                        type=str, required=False)
+    parser.add_argument('-g', '--mutation_genomic', help='Path to cosmic mutation file (genomic)',
+                        type=str, required=False)
+    parser.add_argument('-l', '--classification', help='Path to cosmic classification file',
                         type=str, required=False)
     parser.add_argument('-c', '--CNV', help='Path to cosmic or cbioportal CNV file name',
                         type=str, required=False)
@@ -188,9 +201,9 @@ if __name__ == "__main__":
 
 
     if args.type == 'sub_indel':
-        mutation_main(args.mutation, args.refgene, args.default, args.default_cancer)
+        mutation_main(args.mutation_targeted, args.mutation_genomic, args.classification, args.refgene, args.default, args.default_cancer)
     elif args.type == 'CNV':
-        CNV_main(args.source, args.CNV, args.refgene, args.snp, args.default, args.default_cancer)
+        CNV_main(args.source, args.CNV, args.classification, args.refgene, args.snp, args.default, args.default_cancer)
     elif args.type == 'both':
-        mutation_main(args.mutation, args.refgene, args.default, args.default_cancer)
-        CNV_main(args.source, args.CNV, args.refgene, args.snp, args.default, args.default_cancer)
+        mutation_main(args.mutation_targeted, args.mutation_genomic, args.classification, args.refgene, args.default, args.default_cancer)
+        CNV_main(args.source, args.CNV, args.classification, args.refgene, args.snp, args.default, args.default_cancer)

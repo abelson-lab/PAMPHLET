@@ -1,6 +1,6 @@
-from time import sleep
+# from time import sleep
 from typing import Dict
-import matplotlib.pyplot as plt
+# import matplotlib.pyplot as plt
 
 from choose_probe_target import parse_chromosome_position_range
 from others import write_output_excel, write_output_txt
@@ -12,27 +12,38 @@ def divide_CNV_by_gene(
 
     all_tumours_ids = []
 
+    # for any genes, extract the tumour id
     for gene, info in gene_mutation_type_info_dict.items():
-        tumour_ids = info['id tumour']
+        tumour_ids = info['COSMIC_SAMPLE_ID']
         all_tumours_ids.extend(tumour_ids)
 
+    # then count how many distinct ones are there
     all_unique_tumour_ids = list(set(all_tumours_ids))
+    num_total_unique_tumour_ids = len(all_unique_tumour_ids)
 
-    num_unique_tumour_ids = len(all_unique_tumour_ids)
 
     input_list_CNV = []
-    # already grouped by genes
+    # for each gene, summarize the information
     for gene, info in gene_mutation_type_info_dict.items():
 
-        tumour_ids = info['id tumour']
-        CNV_coordinates = info['CNV coordinates']
-        mutation_type = info['mutation type']
+        tumour_ids = info['COSMIC_SAMPLE_ID']
+
+        CNV_coordinate_list = []
+        for i in range(len(info['GENOME_START'])):
+            CNV_chromosome = info['CHROMOSOME'][i]
+            CNV_genome_start = info['GENOME_START'][i]
+            CNV_genome_end = info['GENOME_STOP'][i]
+            CNV_coordinate = CNV_chromosome + ":" + CNV_genome_start + "-" + CNV_genome_end
+            CNV_coordinate_list.append(CNV_coordinate)
+
+        # CNV_coordinates = info['CNV coordinates']
+        mutation_type = info['MUT_TYPE']
 
         unique_tumours = list(set(tumour_ids))
         num_unique_tumours = len(unique_tumours)
 
         input_list_CNV.append([
-            gene, set(CNV_coordinates), mutation_type, unique_tumours, num_unique_tumours, num_unique_tumour_ids
+            gene, set(CNV_coordinate_list), mutation_type, unique_tumours, num_unique_tumours, num_total_unique_tumour_ids
         ])
 
     input_list_CNV.sort(key=lambda x: x[4], reverse=True)
@@ -77,6 +88,8 @@ def visualize_CNV_on_IGV(gene_mutation_type_info_dict):
 def plot_CNV(CNV_genes):
     # find all tumours
     # skip the first row since it is the header
+
+    # first find the total number of unique tumours
     all_tumour = []
     for row in CNV_genes[1:]:
         gene_tumour = row[3]
@@ -85,6 +98,7 @@ def plot_CNV(CNV_genes):
     all_unique_tumour = list(set(all_tumour))
     num_all_unique_tumour = len(all_unique_tumour)
 
+    # count the relative contribution of each CNV gene
     selected_tumour = []
     cover_sizes_percentage = [0]
     for row in CNV_genes[1:]:
@@ -109,6 +123,15 @@ def plot_CNV(CNV_genes):
 def choose_SNP_targets(CNV_genes, reference_genome_filename, needed_minor_allele_frequency,
                        common_snp_filename, top_X_CNV_gene_to_be_targeted, targeting_window_size,
                        num_probe_per_gene_individual):
+    """
+        In the dbsnp file, we know the coordinate of each snp, but we do not know
+    which gene is corresponds to. so we need to
+    1. find the transcription region of each gene,
+    2. map each gene to transcription region,
+    3. then map each base in the transcription region to the gene.
+    4. Finally, we can map gene to snp, through
+    mapping snp to coordinate (a base in transcription region)
+    """
     gene_ranges_dict = {}
 
     # map gene to transcription
@@ -172,6 +195,15 @@ def choose_SNP_targets(CNV_genes, reference_genome_filename, needed_minor_allele
 
 
 def map_gene_to_transcription_region(gene_name_transcription_dict, gene_ranges_dict, reference_genome_filename):
+    """
+    we need to find the transcription region for each CNV gene to find the SNPs
+    that falls within the range
+    :param gene_name_transcription_dict:
+    :param gene_ranges_dict:
+    :param reference_genome_filename:
+    :return:
+    """
+
     with open(reference_genome_filename) as hgnc_genes:
         next(hgnc_genes)
         for gene_transcript in hgnc_genes:
@@ -219,6 +251,9 @@ def map_gene_to_transcription_region(gene_name_transcription_dict, gene_ranges_d
 
 def map_transcribed_bases_to_gene(CNV_genes, gene_name_transcription_dict, position_gene_dict,
                                   top_X_CNV_gene_to_be_targeted):
+    """using the information from above funciton from the reference genome file
+    """
+
     num_gene_not_in_file = 0
     for CNV_gene_section in CNV_genes[1:top_X_CNV_gene_to_be_targeted + 1]:
 
@@ -245,12 +280,6 @@ def map_transcribed_bases_to_gene(CNV_genes, gene_name_transcription_dict, posit
 
 def map_gene_to_snps(gene_snps_dict, common_snp_filename, position_gene_dict):
     """
-    In the dbsnp file, we know the coordinate of each snp, but we do not know
-    which gene is corresponds to. so we need to find the transcription region of
-    each gene, map each gene to transcription region, then map each base in the
-    transcription region to the gene. Finally, we can map gene to snp, through
-    mapping snp to 'coordinate'/'a base in transcription region', a base
-    in the transcription to the gene.
     :param common_snp_filename: file of common snps
     :param position_gene_dict: mapping of a base in the transcription to a gene
     :param gene_snps_dict: dict to be populated

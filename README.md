@@ -53,7 +53,8 @@ The gene track list the genomic coordinate for the coding region and transcripti
 COSMIC v97 (Nov 2022) was used for this example. This command runs PAMPHLET on myeloid cancer mutations in the default setting.
 Go to the directory where you put the code files and type the following command into the terminal.
 ```
-python3 PAMPHLET.py -t sub_indel -m <cosmic mutation file path> -r <refseq gene file path> -d default -a m 
+python3 PAMPHLET.py -t sub_indel -m <cosmic mutation file path (targeted)> -g <cosmic mutation file path (genomic)>
+ -l <cosmic classification file path> -r <refseq gene file path> -d default -a m 
 ```
 
 #### Step 0: Read file and Specify User Preferences
@@ -179,12 +180,14 @@ into the terminal.
 
 This is the command for general use
 ```
-python3 PAMPHLET.py -t sub_indel -m <cosmic mutation file path> -r <refseq gene file path>
+python3 PAMPHLET.py -t sub_indel -m <cosmic mutation file path (targeted)> -g <cosmic mutation file path (genomic)>
+ -l <cosmic classifcation file> -r <refseq gene file path>
 ```
 
 You can use the '-d default' option to use the default for all user specification option 
 ```
-python3 PAMPHLET.py -t sub_indel -m <cosmic mutation file path> -r <refseq gene file path> -d default
+python3 PAMPHLET.py -t sub_indel -m <cosmic mutation file path (targeted)> -g <cosmic mutation file path (genomic)>
+ -l <cosmic classifcation file> -r <refseq gene file path> -d default
 ```
 
 ## CNV
@@ -238,7 +241,7 @@ COSMIC v97 (Nov 2022) was used for this example.
 This command runs PAMPHLET on myeloid cancer mutations in the default setting.
 Go to the directory where you put the code files and type into the terminal.
 ```
-python3 PAMPHLET.py -t CNV -s cosmic -m <cosmic mutation file path> -r <refseq gene file path> -p <common snp file path> 
+python3 PAMPHLET.py -t CNV -s cosmic -m <cosmic mutation file path> -l <cosmic classifcation file> -r <refseq gene file path> -p <common snp file path> 
 -d default -a m
 ```
 
@@ -291,7 +294,7 @@ python3 PAMPHLET.py -t CNV -s cbioportal -c <cbioportal CNV file path> -r <refse
 (if user is using cosmic for CNV)
 
 ```
-python3 PAMPHLET.py -t CNV -s cosmic -c <cosmic CNV file path> -r <refseq gene file path> -p <common snp file path>
+python3 PAMPHLET.py -t CNV -s cosmic -l <cosmic classifcation file> -c <cosmic CNV file path> -r <refseq gene file path> -p <common snp file path>
 ```
 
 (if the user is providing their own list for CNV)
@@ -303,7 +306,7 @@ python3 PAMPHLET.py -t CNV -s user -r <refseq gene file path> -p <common snp fil
 You can use the '-d default' option to use the default for all user specification option 
 ```
 python3 PAMPHLET.py -t CNV -s cbioportal -c <cbioportal CNV file path> -r <refseq gene file path> -p <common snp file path> -d default
-python3 PAMPHLET.py -t CNV -s cosmic -c <cosmic CNV file path> -r <refseq gene file path> -p <common snp file path> -d default
+python3 PAMPHLET.py -t CNV -s cosmic -l <cosmic classifcation file> -c <cosmic CNV file path> -r <refseq gene file path> -p <common snp file path> -d default
 python3 PAMPHLET.py -t CNV -s user -r <refseq gene file path> -p <common snp file path>  -d default
 ```
 

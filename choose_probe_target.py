@@ -1,9 +1,10 @@
-import copy
+# import copy
 
-import matplotlib.pyplot as plt
+# import matplotlib.pyplot as plt
 from typing import Any, List, Dict, Set, Tuple, Union
 
-from others import write_output_excel, write_output_txt
+from others import write_output_txt
+# from others import write_output_excel
 
 """the only 0th level function in this file"""
 
@@ -127,7 +128,6 @@ def chose_most_recurrent_mutation_then_probe_centered_at_mutation_center(
 
             if position in position_mutation:
                 mutation_notation = set(position_mutation[position])
-                unique_tumours = set(tumour_set)
                 num_unique_tumours = len(list(set(tumour_set)))
                 input_list.append(
                     [position, num_unique_tumours, gene, mutation_notation])
@@ -213,16 +213,19 @@ def get_mapping_position_tumour(all_tumour_id: List[str],
     :return:
     """
 
+    # first count the number of mutation and tumour before indel filtering
     all_tumour_id_before_indel_filter = []
     num_mutation_before_indel_filter = 0
     for gene_cell_type, info in gene_mutation_type_info_dict.items():
 
-        for i in range(len(info['mutation genome position'])):
-            tumour_id = info['id tumour'][i]
+        # the length of the info['GENOME_START'] is used to measure
+        #    number of mutation in this gene
+        for i in range(len(info['GENOME_START'])):
+            tumour_id = info['COSMIC_SAMPLE_ID'][i]
             all_tumour_id_before_indel_filter.append(tumour_id)
 
         num_mutation_before_indel_filter += len(
-            list(set(info['mutation genome position'])))
+            list(set(info['GENOME_START'])))
 
     all_tumour_id_before_indel_filter = list(
         set(all_tumour_id_before_indel_filter))
@@ -232,6 +235,7 @@ def get_mapping_position_tumour(all_tumour_id: List[str],
     print("total number of tumours after intronic before indel filter",
           len(all_tumour_id_before_indel_filter))
 
+    # distribute each mutation into a different dict based their type
     for gene_cell_type, info in gene_mutation_type_info_dict.items():
         # assert len(info['mutation genome position']) == len(info['id tumour'])
 
@@ -244,11 +248,16 @@ def get_mapping_position_tumour(all_tumour_id: List[str],
             position_tumour, position_tumour_substitution, position_tumour_deletion,
             position_tumour_insertion, position_mutation]
 
-        for i in range(len(info['mutation genome position'])):
-            chromosome_position_range = info['mutation genome position'][i]
-            tumour_id = info['id tumour'][i]
-            mutation_aa = info['mutation AA'][i]
-            if chromosome_position_range != 'null' and tumour_id != 'null':
+        for i in range(len(info['GENOME_START'])):
+            chromosome = info['CHROMOSOME'][i]
+            genomic_start = info['GENOME_START'][i]
+            genomic_end = info['GENOME_STOP'][i]
+
+            chromosome_position_range = chromosome + ':' + genomic_start + '-' + genomic_end
+
+            tumour_id = info['COSMIC_SAMPLE_ID'][i]
+            mutation_aa = info['MUTATION_AA'][i]
+            if chromosome != '' and genomic_start != '' and genomic_end != '' and tumour_id != '':
 
                 # all genomic position are in the format a:b-c
                 # where an is the chromosome number, followed by a semicolon
@@ -479,7 +488,7 @@ def find_probe_cover(all_position_tumour_dict: Dict[str, Set[str]],
 """3rd level function """
 
 
-# TODO, do docstring for this, I forgot this last time
+
 def get_probe_covered_tumours(all_position_tumour_dict: Dict[str, Set[str]],
                               position_most_tumour: str,
                               recurrent_definition: int,
@@ -884,30 +893,40 @@ def make_dict_chromosome_position_to_range(
 
 
 def parse_chromosome_position_range(chromosome_position_range: str):
-    # example 2:3241-3276 (for mutation)
-    # example 13:18598287..114344403 (for CNV)
     semicolon_index = chromosome_position_range.index(':')
+    dash_index = chromosome_position_range.index('-')
+    position_range_start = chromosome_position_range[
+                           semicolon_index + 1:dash_index]
+    position_range_end = chromosome_position_range[dash_index + 1:]
+    position_list = list(range(int(position_range_start),
+                               int(position_range_end) + 1))
 
-    # this '8:30837618' is possible
-    if '..' in chromosome_position_range:  # for CNV
-        first_dot_index = chromosome_position_range.index('.')
-        position_range_start = chromosome_position_range[
-                               semicolon_index + 1:first_dot_index]
-        position_range_end = chromosome_position_range[first_dot_index + 2:]
-        position_list = []
-    elif '-' not in chromosome_position_range:  # example '8:30837618'
-        position_range_start = chromosome_position_range[
-                               semicolon_index + 1:]
-        position_range_end = position_range_start
-        position_list = list(range(int(position_range_start),
-                                   int(position_range_end) + 1))
-    else:  # example 2:3241-3276
-        dash_index = chromosome_position_range.index('-')
-        position_range_start = chromosome_position_range[
-                               semicolon_index + 1:dash_index]
-        position_range_end = chromosome_position_range[dash_index + 1:]
-        position_list = list(range(int(position_range_start),
-                                   int(position_range_end) + 1))
+
+    # after file format change, separating these, its not necessary
+
+    # # example 2:3241-3276 (for mutation)
+    # # example 13:18598287..114344403 (for CNV)
+    #
+    # # this '8:30837618' is possible
+    # if '..' in chromosome_position_range:  # for CNV
+    #     first_dot_index = chromosome_position_range.index('.')
+    #     position_range_start = chromosome_position_range[
+    #                            semicolon_index + 1:first_dot_index]
+    #     position_range_end = chromosome_position_range[first_dot_index + 2:]
+    #     position_list = []
+    # elif '-' not in chromosome_position_range:  # example '8:30837618'
+    #     position_range_start = chromosome_position_range[
+    #                            semicolon_index + 1:]
+    #     position_range_end = position_range_start
+    #     position_list = list(range(int(position_range_start),
+    #                                int(position_range_end) + 1))
+    # else:  # example 2:3241-3276
+    #     dash_index = chromosome_position_range.index('-')
+    #     position_range_start = chromosome_position_range[
+    #                            semicolon_index + 1:dash_index]
+    #     position_range_end = chromosome_position_range[dash_index + 1:]
+    #     position_list = list(range(int(position_range_start),
+    #                                int(position_range_end) + 1))
 
     return position_list, position_range_end, position_range_start, semicolon_index
 
