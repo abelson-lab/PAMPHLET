@@ -318,6 +318,7 @@ def define_important_columns_CNV() -> List[str]:
 
 
 def read_process_file_point_mutation(cosmic_mutation_file_name: str,
+                                     cosmic_sample_file_name: str,
                                      gene_mutation_type_info_dict: Dict[
                                          str, dict],
                                      important_column_heading_list: List[str],
@@ -325,17 +326,21 @@ def read_process_file_point_mutation(cosmic_mutation_file_name: str,
                                      remove_intronic_mutation: bool = True):
     """
     Read the mutation file, then calculate the frequency
+    :param cosmic_sample_file_name: the cosmic file about their samples
     :param cosmic_mutation_file_name: The file name of the cosmic mutation file
     :param gene_mutation_type_info_dict: The dict that the mutation are to be read into
     :param important_column_heading_list: The headings of the columns to be read
     :param remove_intronic_mutation: Whether the user choose to remove intronic mutations
     :param chosen_phenotype: The group of cancers that the user choose to target
     """
+    sample_id_to_tumour_id = {}
+    read_sample_file(cosmic_sample_file_name, sample_id_to_tumour_id)
     read_mutation_file(cosmic_mutation_file_name,
                        important_column_heading_list,
                        gene_mutation_type_info_dict,
                        remove_intronic_mutation,
-                       chosen_phenotype)
+                       chosen_phenotype,
+                       sample_id_to_tumour_id)
     # and store in gene_info_dict
     calculate_mutation_frequency(gene_mutation_type_info_dict)
 
@@ -343,15 +348,37 @@ def read_process_file_point_mutation(cosmic_mutation_file_name: str,
 """3rd level function"""
 
 
+def read_sample_file(cosmic_sample_file_name, sample_id_to_tumour_id):
+    """file about the sequenced samples"""
+
+    # find the column number of the columns
+    with open(cosmic_sample_file_name) as sample_file:
+        csv_reader = csv.reader(sample_file, delimiter='\t')
+        header = next(csv_reader)
+        cosmic_sample_id_col_num = header.index('COSMIC_SAMPLE_ID')
+        tumour_id_col_num = header.index('TUMOUR_ID')
+
+    # map to sample id to tumour id
+    with open(cosmic_sample_file_name) as sample_file:
+        csv_reader = csv.reader(sample_file, delimiter='\t')
+        next(csv_reader)
+        for row in csv_reader:
+            cosmic_sample_id = row[cosmic_sample_id_col_num]
+            tumour_id = row[tumour_id_col_num]
+            sample_id_to_tumour_id[cosmic_sample_id] = tumour_id
+
+
 def read_mutation_file(cosmic_mutation_file_name: str,
                        important_column_heading_list: List[str],
                        gene_mutation_type_dict: Dict[str, dict],
                        remove_intronic_mutation: bool,
-                       chosen_phenotype: Dict[str, str]):
+                       chosen_phenotype: Dict[str, str],
+                       sample_id_to_tumour_id: Dict[str, str]):
     """
     Read the mutation file into the dictionary
     gene_mutation_type_dict consist of dictionaries that map gene name to information
     mutation type is just point vs CNV
+    :param sample_id_to_tumour_id: mapping sample id to tumour id
     :param cosmic_mutation_file_name: The file name of the cosmic mutation file
     :param important_column_heading_list: The headings of the columns to be read
     :param gene_mutation_type_dict: The dict that the mutation are to be read into
@@ -366,12 +393,12 @@ def read_mutation_file(cosmic_mutation_file_name: str,
         phenotype_id_col_num = header.index('COSMIC_PHENOTYPE_ID')  # 5
         mutation_cds_col_num = header.index('MUTATION_CDS')  # 9
         mutation_description_col_num = header.index('MUTATION_DESCRIPTION')
-        cosmic_sample_id_cosmic_col_num = header.index('COSMIC_SAMPLE_ID')  # 4
+        cosmic_sample_id_col_num = header.index('COSMIC_SAMPLE_ID')  # 4
         mutation_id_col_num = header.index('MUTATION_ID')
 
         assert gene_name_col_num == 0
 
-        mutation_counting_col_nums = [cosmic_sample_id_cosmic_col_num,
+        mutation_counting_col_nums = [cosmic_sample_id_col_num,
                                       phenotype_id_col_num,
                                       mutation_id_col_num]
 
@@ -385,7 +412,8 @@ def read_mutation_file(cosmic_mutation_file_name: str,
         csv_reader = csv.reader(mutation_file, delimiter='\t')
 
         count_tumour_mutation_before_intronic(chosen_phenotype,
-                                              csv_reader, mutation_counting_col_nums)
+                                              csv_reader, mutation_counting_col_nums,
+                                              sample_id_to_tumour_id)
 
     with open(cosmic_mutation_file_name) as mutation_file:
         csv_reader = csv.reader(mutation_file, delimiter='\t')
@@ -421,8 +449,13 @@ def read_mutation_file(cosmic_mutation_file_name: str,
                 for i in range(len(important_column_heading_list)):
                     column_heading = important_column_heading_list[i]
                     column_num = important_column_number_list[i]
+                    column_value = row[column_num]
+
+                    if column_heading == 'COSMIC_SAMPLE_ID':
+                        column_value = sample_id_to_tumour_id[column_value]
+
                     specific_gene_dict.setdefault(
-                        column_heading, []).append(row[column_num])
+                        column_heading, []).append(column_value)
                     # for example
                     # specific_gene_dict.setdefault('sample name', []).append(row[4])
 
@@ -454,14 +487,16 @@ def filter_intronic_mutations(mutation_CDS) -> bool:
 
 
 def count_tumour_mutation_before_intronic(chosen_phenotype: Dict[str, str],
-                                          csv_reader, mutation_counting_col_nums):
+                                          csv_reader, mutation_counting_col_nums,
+                                          sample_id_to_tumour_id):
     """
     Count the total number of unique tumour and unique mutations
     including intronic mutation
+    :param sample_id_to_tumour_id: cosmic file about their sample
     :param mutation_counting_col_nums: column number of tumour and mutation
      counting purposes
     :param chosen_phenotype: The phenotype that the user chose
-    :param csv_reader:
+    :param csv_reader: reading the csv of mutation file
     :return:
     """
     unique_tumour_before_intronic_mutation = []
@@ -476,27 +511,27 @@ def count_tumour_mutation_before_intronic(chosen_phenotype: Dict[str, str],
         if cosmic_phenotype_id in chosen_phenotype:
             cosmic_sample_id = row[cosmic_sample_id_col_num]
 
+            tumour_id = sample_id_to_tumour_id[cosmic_sample_id]
+
             mutation_id = row[mutation_id_col_num_col_num]
 
             # TODO: A better idea is to use tumour id instead, since there can
             #   be multiple sample per tumour, (tumour id information is in
             #   the sample file)
-            unique_tumour_before_intronic_mutation.append(cosmic_sample_id)
+            unique_tumour_before_intronic_mutation.append(tumour_id)
             unique_mutation_before_intronic_mutation.append(mutation_id)
-
-    unique_tumour_before_intronic_mutation = set(
-        list(unique_tumour_before_intronic_mutation))
 
     unique_mutation_before_intronic_mutation = set(
         list(unique_mutation_before_intronic_mutation))
 
-    print('total number of tumours before intronic filter',
-          len(unique_tumour_before_intronic_mutation))
+    unique_tumour_before_intronic_mutation = set(
+        list(unique_tumour_before_intronic_mutation))
 
     print('total number of mutations before intronic filter',
           len(unique_mutation_before_intronic_mutation))
 
-
+    print('total number of tumours before intronic filter',
+          len(unique_tumour_before_intronic_mutation))
 
 
 """3rd level functions"""

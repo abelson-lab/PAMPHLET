@@ -12,7 +12,8 @@ from others import write_output_txt
 # write_output_excel
 
 
-def mutation_main(cosmic_mutation_filename_targeted: str, cosmic_mutation_filename_genomic: str, cosmic_classification_filename: str,
+def mutation_main(cosmic_mutation_filename_targeted: str, cosmic_mutation_filename_genomic: str,
+                  cosmic_sample_file_name: str, cosmic_classification_filename: str,
                   reference_genome_filename: str, use_default: str,
                   default_cancer: str):
 
@@ -43,12 +44,14 @@ def mutation_main(cosmic_mutation_filename_targeted: str, cosmic_mutation_filena
     gene_mutation_type_info_dict = {}
     print('Working on selecting mutation from those cancer types')
     read_process_file_point_mutation(cosmic_mutation_filename_targeted,
+                                     cosmic_sample_file_name,
                                      gene_mutation_type_info_dict,
                                      important_column_heading_list,
                                      chosen_phenotype,
                                      remove_non_exonic_mutation)
 
     read_process_file_point_mutation(cosmic_mutation_filename_genomic,
+                                     cosmic_sample_file_name,
                                      gene_mutation_type_info_dict,
                                      important_column_heading_list,
                                      chosen_phenotype,
@@ -183,6 +186,8 @@ if __name__ == "__main__":
                         type=str, required=False)
     parser.add_argument('-g', '--mutation_genomic', help='Path to cosmic mutation file (genomic)',
                         type=str, required=False)
+    parser.add_argument('-e', '--sample_file', help='Path to cosmic samples file',
+                        type=str, required=False)
     parser.add_argument('-l', '--classification', help='Path to cosmic classification file',
                         type=str, required=False)
     parser.add_argument('-c', '--CNV', help='Path to cosmic or cbioportal CNV file name',
@@ -201,9 +206,9 @@ if __name__ == "__main__":
 
 
     if args.type == 'sub_indel':
-        mutation_main(args.mutation_targeted, args.mutation_genomic, args.classification, args.refgene, args.default, args.default_cancer)
+        mutation_main(args.mutation_targeted, args.mutation_genomic, args.sample_file, args.classification, args.refgene, args.default, args.default_cancer)
     elif args.type == 'CNV':
         CNV_main(args.source, args.CNV, args.classification, args.refgene, args.snp, args.default, args.default_cancer)
     elif args.type == 'both':
-        mutation_main(args.mutation_targeted, args.mutation_genomic, args.classification, args.refgene, args.default, args.default_cancer)
+        mutation_main(args.mutation_targeted, args.mutation_genomic, args.sample_file, args.classification, args.refgene, args.default, args.default_cancer)
         CNV_main(args.source, args.CNV, args.classification, args.refgene, args.snp, args.default, args.default_cancer)
