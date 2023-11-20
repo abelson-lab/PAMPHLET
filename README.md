@@ -19,24 +19,27 @@ This pipeline requires the following software and packages:
 
 ## Substitution, Insertions, and Deletions
 
-### To download the COSMIC mutation file
+### To download the COSMIC files
 
 1. Go to COSMIC (https://cancer.sanger.ac.uk/cosmic) and log in. Registration might be required
-2. On the archive download page (https://cancer.sanger.ac.uk/cosmic/download), download COSMIC mutation data that includes both
-   targeted and genome-wide screens. On the website, it is named 'CosmicMutantExport.tsv.gz'
-3. Use either the 'Download Whole file' option or the 'Download Filtered File' option.
-You can download a filtered file if you already know which primary tissue the cancer type you want to target belongs to,
-for example, chronic lymphocytic leukemia belongs to the haematopoietic and lymphoid tissue. You can find what primary tissues are included on 
-the cancer browser page (https://cancer.sanger.ac.uk/cosmic/browse/tissue)
-4. To run the example, use either the 'Download Whole file' option or the 'Download Filtered File' option, and fill in '
-haematopoietic_and_lymphoid_tissue' for the 'Filter by cancer' option.
+2. On the download page (https://cancer.sanger.ac.uk/cosmic/download), download 'Genome Screen Mutant' and 'Targeted Screen Mutant'
+They are named, respectively, on the website, as 'Cosmic_GenomeScreensMutant_Tsv_v98_GRCh38.tar' and 'Cosmic_CompleteTargetedScreensMutant_Tsv_v98_GRCh38.tar'
+3. Then, download 'Classification' and 'Samples', they are named 'Cosmic_Classification_Tsv_v98_GRCh38.tar' and 'Cosmic_Sample_Tsv_v98_GRCh38.tar'
 
 ### COSMIC mutation file description
 
 The COSMIC mutation file is a table of mutations associated with information that is presented in columns such as
 mutation CDS (the nucleotide mutation), mutation description (amino acid level mutation type), genomics coordinate,
-cancer type, gene name, tumour id. Each entry in the file is linked to a single tumour ID and one genomic coordinate.
+ gene name, sample ID. Each entry in the file is linked to a single sample ID and one genomic coordinate.
+One of files is the targeted screen, and the other one is the genome-wide screen. 
 
+### COSMIC samples file description
+The COSMIC mutation file is a table of samples ID associated with information that is presented in columns such as
+tumour ID
+
+### COSMIC classification file description
+The COSMIC mutation file is a table of phenotype ID associated with information that is presented in columns such as
+various value indicating the cancer type.
 
 ### To download the gene track file
 
