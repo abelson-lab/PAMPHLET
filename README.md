@@ -195,20 +195,16 @@ python3 PAMPHLET.py -t sub_indel -m <cosmic mutation file path (targeted)> -g <c
 
 ## CNV
 
-The user just needs one of the three, a COSMIC CNV file, a cBioPortal CNV file, or a user-provided gene list. 
+The user just needs one of the three, a COSMIC CNV file, a cBioPortal CNV file, or a user-provided gene list. If the user
+decides to use a COSMIC CNV file, the classification file is also required. 
 DbSNP is required since it contains the genomic location of common SNPs and their allelic frequencies.
+The gene track file is also required to map the SNPs to each gene. 
 
 ### To download the COSMIC CNV file
 
 1. Go to COSMIC (https://cancer.sanger.ac.uk/cosmic) and log in. Registration might be required
-2. On the download page (https://cancer.sanger.ac.uk/cosmic/download), download the file for "Copy Number Variants.". On
-   the website, it is named 'CosmicCompleteCNA.tsv.gz'
-3. Use either the 'Download Whole file' option or the 'Download Filtered File' option, and fill in '
-   haematopoietic_and_lymphoid_tissue' for the 'Filter by cancer' option. You can download a filtered file
-   if you already know which primary tissue the cancer type you want to target belongs to,
-   for example, chronic lymphocytic leukemia belongs to the haematopoietic and lymphoid tissue.
-   you can find what primary tissues are included on the 
-   cancer browser page (https://cancer.sanger.ac.uk/cosmic/browse/tissue)
+2. On the download page (https://cancer.sanger.ac.uk/cosmic/download), download the file for "CNA (Copy Number Analysis).". On
+   the website, it is named 'Cosmic_CompleteCNA_Tsv_v98_GRCh38.tar'
 
 ### COSMIC CNV File description
 
