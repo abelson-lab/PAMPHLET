@@ -1,6 +1,6 @@
 # PAMPHLET
 
-Here we present a manual with examples detailing how to use PAMPHLET to generate ranges that cover recurrently mutated genomics
+Here we present a manual with examples detailing how to use PAMPHLET (Prioritization and Aggregation of Mutations by recurrence and Proximity for any HistologicaL subtypE in any cancer to aid in Targeted sequencing panel designs) to generate ranges that cover recurrently mutated genomics
 coordinates for targeted sequencing panels based on prior knowledge, such as from mutation data obtained from the
 Catalogue of Somatic Mutations in Cancer (COSMIC) and cBio Cancer Genomics Portal (CBioPortal).
 
